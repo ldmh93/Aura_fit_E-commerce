@@ -1,0 +1,219 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────
+   AURA FIT — Design tokens
+   Ver .claude/design-system.md antes de modificar.
+   ───────────────────────────────────────────────────────────── */
+
+@theme {
+  --color-void: #050505;
+  --color-graphite: #111111;
+  --color-steel: #1a1a1d;
+  --color-silver: #c7d7e8;
+  --color-aura: #5ea8ff;
+  --color-mist: #8a93a0;
+
+  --color-success: #3fd9a0;
+  --color-warning: #e8c46a;
+  --color-danger: #ff5c5c;
+
+  --font-sans: var(--font-geist-sans), Inter, system-ui, sans-serif;
+
+  --ease-aura: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --shadow-aura: 0 0 40px -12px rgb(94 168 255 / 0.5);
+  --shadow-aura-lg: 0 0 80px -20px rgb(94 168 255 / 0.55);
+}
+
+:root {
+  --gradient-metal: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #c7d7e8 40%,
+    #7f8fa4 68%,
+    #eaf2ff 100%
+  );
+  --gradient-aura: linear-gradient(135deg, #5ea8ff 0%, #c7d7e8 100%);
+  color-scheme: dark;
+}
+
+* {
+  border-color: color-mix(in srgb, #ffffff 8%, transparent);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--color-void);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-aura) 35%, transparent);
+  color: #ffffff;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-void);
+}
+::-webkit-scrollbar-thumb {
+  background: #26262b;
+  border-radius: 999px;
+  border: 2px solid var(--color-void);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a42;
+}
+
+/* Foco accesible */
+:focus-visible {
+  outline: 2px solid var(--color-aura);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Utilidades de marca ───────────────────────────────────── */
+
+@utility text-metal {
+  background-image: var(--gradient-metal);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+@utility container-aura {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  @media (width >= 48rem) {
+    padding-inline: 2rem;
+  }
+}
+
+@utility eyebrow {
+  font-size: 0.6875rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-aura);
+  font-weight: 500;
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Halo de luz azul de fondo */
+@utility aura-glow {
+  position: absolute;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at center,
+    rgb(94 168 255 / 0.16) 0%,
+    rgb(94 168 255 / 0.05) 40%,
+    transparent 70%
+  );
+}
+
+/* Línea divisoria que se desvanece a los lados */
+@utility hairline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(199 215 232 / 0.22),
+    transparent
+  );
+}
+
+/* Superficie de card */
+@utility surface {
+  background-color: var(--color-graphite);
+  border: 1px solid rgb(255 255 255 / 0.07);
+  border-radius: 1rem;
+}
+
+/* ── Animaciones ───────────────────────────────────────────── */
+
+@keyframes aura-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes aura-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes aura-pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-float {
+  animation: aura-float 6s var(--ease-aura) infinite;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(199 215 232 / 0.12),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: aura-shimmer 1.8s linear infinite;
+}
+
+/* Cuando hay barra de compra fija (página de producto en móvil),
+   el botón flotante de WhatsApp sube para no quedar encima. */
+body[data-sticky-cta="1"] .whatsapp-fab {
+  bottom: 6.25rem;
+}
+
+@media (width >= 48rem) {
+  body[data-sticky-cta="1"] .whatsapp-fab {
+    bottom: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

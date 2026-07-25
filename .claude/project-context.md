@@ -1,7 +1,7 @@
 # AURA FIT STORE — Contexto Principal del Proyecto
 
-> **Leer este archivo primero.** Es el "cerebro" del proyecto. Antes de modificar
-> grandes partes del sistema, consultar también `architecture.md`,
+> **Leer este archivo primero.** Es el "cerebro" del proyecto. Antes de
+> modificar grandes partes del sistema, consultar también `architecture.md`,
 > `design-system.md`, `database-schema.md`, `development-rules.md`,
 > `business-rules.md` y `roadmap.md`.
 
@@ -9,27 +9,39 @@
 
 ## Descripción
 
-AURA FIT es una marca premium de ropa deportiva (Performance Wear).
-El proyecto consiste en un ecommerce personalizado estilo Shopify construido con
-Next.js 15, con checkout por WhatsApp y panel administrativo privado.
+AURA FIT es un **proveedor pequeño** de ropa deportiva. El proyecto es su
+tienda en línea: catálogo corto y cuidado, pedidos por WhatsApp y entrega en
+punto de encuentro. Incluye un panel administrativo privado completo.
 
-No es solo una tienda: es el ecosistema digital oficial de la marca.
+La interfaz busca sentirse premium sin ser pesada: pocos productos, bien
+presentados.
 
 ## Objetivo
 
 Los clientes deben poder:
 
-- Explorar la colección de ropa deportiva
+- Ver el catálogo completo sin fricción
 - Consultar precios en MXN
-- Revisar descripción y características técnicas del producto
-- Ver disponibilidad de stock real (por talla y color)
-- Seleccionar talla y color
-- Agregar al carrito **sin registrarse**
-- Enviar su pedido por WhatsApp
-- Comprar de forma rápida y sencilla
+- Ver disponibilidad real por talla y color
+- Armar su pedido **sin registrarse**
+- Enviarlo por WhatsApp
+- Acordar el punto de encuentro para recibirlo
 
-El administrador debe poder gestionar productos, inventario, pedidos, cupones y
-ver métricas del negocio desde `/admin`.
+El administrador debe poder gestionar productos, categorías, inventario,
+pedidos, cupones, estadísticas y ajustes desde `/admin`.
+
+---
+
+## Lo que este negocio NO tiene
+
+Importante, porque define qué **no** debe aparecer en la interfaz:
+
+- ❌ Envíos a domicilio, paqueterías, guías o costos de envío
+- ❌ Direcciones de entrega
+- ❌ Pasarela de pago en línea
+- ❌ Cuentas de cliente
+- ❌ Colecciones o líneas de producto (solo Hombre y Mujer)
+- ❌ Catálogo masivo
 
 ---
 
@@ -42,34 +54,24 @@ ver métricas del negocio desde `/admin`.
 - TypeScript (modo estricto)
 - Tailwind CSS v4 (configuración CSS-first en `src/app/globals.css`)
 - Framer Motion (animaciones)
-- Zustand (estado del carrito, persistido en localStorage)
+- Zustand (carrito, persistido en localStorage)
+- Recharts (gráficas del panel, carga diferida)
 
 **Backend**
 
 - Next.js Server Actions
-- API Routes (solo cuando Server Actions no aplican: webhooks, sitemap, etc.)
+- API Routes solo cuando Server Actions no aplican
 
-**Base de datos**
+**Datos — estado actual**
 
-- Supabase PostgreSQL
-
-**Autenticación**
-
-- Supabase Auth — **solo para el administrador**
-- Los clientes NUNCA crean cuenta
-
-**Storage**
-
-- Supabase Storage (imágenes, videos, material multimedia)
+- El catálogo, los pedidos y los cupones viven en `src/lib/mock-data.ts`
+- Los ajustes de la tienda se guardan en `.data/settings.json`
+- **Supabase todavía no está conectado.** El esquema destino está escrito en
+  `supabase/migrations/` y los clientes en `src/lib/supabase/`
 
 **Hosting**
 
 - Vercel
-
-**Analítica**
-
-- Meta Pixel (ViewContent, AddToCart, InitiateCheckout, Purchase)
-- Google Analytics 4
 
 ---
 
@@ -77,10 +79,7 @@ ver métricas del negocio desde `/admin`.
 
 Marca: **AURA FIT**
 Concepto: Performance Wear / Fitness Premium
-Estilo: fitness premium futurista, minimalismo metálico.
-
-La marca transmite: tecnología, rendimiento, disciplina, evolución personal,
-exclusividad, innovación.
+Estilo: minimalismo metálico, fondo negro, luz azul.
 
 ### Colores
 
@@ -92,45 +91,24 @@ exclusividad, innovación.
 | Azul tecnológico    | `#5EA8FF` |
 | Texto               | `#FFFFFF` |
 
-**Nunca utilizar:**
+**Nunca utilizar:** colores cálidos como color de marca, diseños que se vean
+económicos, interfaces saturadas.
 
-- Colores cálidos (dorado, naranja, rojo) salvo estados de error/alerta mínimos
-- Diseños que se vean económicos
-- Interfaces saturadas
-
-El detalle completo está en `design-system.md`.
+Detalle completo en `design-system.md`.
 
 ---
 
 ## Reglas importantes
 
-Antes de crear componentes:
-
-1. Revisar los componentes existentes en `src/components` y `src/features`.
+1. Revisar los componentes existentes antes de crear otro.
 2. Mantener arquitectura modular (feature-based).
 3. No duplicar código.
-4. Usar TypeScript estricto (nada de `any`).
-5. Mantener diseño responsive **mobile first**.
-6. Preferir Server Components; `"use client"` solo cuando hay interacción.
+4. TypeScript estricto: nada de `any`.
+5. Mobile first.
+6. Server Components por defecto; `"use client"` solo donde hay interacción.
+7. Ningún componente lee datos directamente: todo pasa por `src/services`.
 
 Reglas completas en `development-rules.md`.
-
----
-
-## Arquitectura
-
-Feature Based Architecture:
-
-```
-src/features/products
-src/features/cart
-src/features/orders
-src/features/inventory
-src/features/coupons
-src/features/admin
-```
-
-Detalle en `architecture.md`.
 
 ---
 
@@ -138,17 +116,14 @@ Detalle en `architecture.md`.
 
 - Los usuarios **NO** crean cuenta.
 - El carrito vive en `localStorage` vía Zustand.
-- El checkout es **WhatsApp**: se genera un mensaje pre-formateado con el pedido.
-- El pedido se registra en la tabla `orders` con estado `pendiente`.
-- El administrador confirma, cobra y actualiza el estado manualmente.
+- El checkout es **WhatsApp**: se genera un mensaje pre-formateado.
+- El pedido se registra con estado `pendiente`.
+- El administrador confirma, cobra y registra el punto de encuentro.
 
 ---
 
-## Estado actual
+## Versiones del diseño
 
-Proyecto en desarrollo activo.
-
-- El catálogo funciona con Supabase cuando hay credenciales en `.env.local`.
-- Si no hay credenciales, la app cae automáticamente a datos mock
-  (`src/lib/mock-data.ts`) para que `npm run dev` funcione sin configuración.
-- Ver `roadmap.md` para lo pendiente.
+- Rama `main`: tienda simplificada para catálogo pequeño (actual).
+- Rama `diseno-v1-premium`: primera versión con 5 colecciones, filtros
+  amplios y envíos. Se conserva como alternativa.

@@ -1,21 +1,11 @@
-import { createServerSupabase } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/env";
 import { mockCoupons } from "@/lib/mock-data";
 import { BUSINESS } from "@/lib/config";
 import type { Coupon } from "@/types";
 
-const SELECT = "id,code,discount,starts_at,expiration,product_id,active";
-
 export async function getCoupons(): Promise<Coupon[]> {
-  const supabase = isSupabaseConfigured ? await createServerSupabase() : null;
-  if (!supabase) return mockCoupons;
-
-  const { data } = await supabase
-    .from("coupons")
-    .select(SELECT)
-    .order("expiration", { ascending: false });
-
-  return (data ?? []) as Coupon[];
+  return [...mockCoupons].sort(
+    (a, b) => +new Date(b.expiration) - +new Date(a.expiration),
+  );
 }
 
 export interface CouponResult {
@@ -26,8 +16,8 @@ export interface CouponResult {
 }
 
 /**
- * Valida un cupón en el servidor.
- * Las reglas comerciales están en .claude/business-rules.md
+ * Valida un cupón en el servidor. Nunca confiar en el cliente.
+ * Reglas en .claude/business-rules.md
  */
 export async function validateCoupon(rawCode: string): Promise<CouponResult> {
   const code = rawCode.trim().toUpperCase();
@@ -40,13 +30,7 @@ export async function validateCoupon(rawCode: string): Promise<CouponResult> {
 
   if (!code) return invalid("Escribe un código.");
 
-  const supabase = isSupabaseConfigured ? await createServerSupabase() : null;
-
-  const coupon = supabase
-    ? ((
-        await supabase.from("coupons").select(SELECT).eq("code", code).single()
-      ).data as Coupon | null)
-    : (mockCoupons.find((c) => c.code === code) ?? null);
+  const coupon = mockCoupons.find((c) => c.code === code);
 
   if (!coupon) return invalid("Ese código no existe.");
   if (!coupon.active) return invalid("Ese cupón ya no está activo.");
@@ -65,4 +49,48 @@ export async function validateCoupon(rawCode: string): Promise<CouponResult> {
     code,
     message: `Cupón aplicado: ${discount}% de descuento.`,
   };
+}
+
+export interface CouponInput {
+  code: string;
+  discount: number;
+  starts_at: string;
+  expiration: string;
+}
+
+export async function createCoupon(
+  input: CouponInput,
+): Promise<{ ok: boolean; message: string }> {
+  const code = input.code.trim().toUpperCase();
+
+  if (mockCoupons.some((c) => c.code === code)) {
+    return { ok: false, message: "Ese código ya existe." };
+  }
+
+  mockCoupons.unshift({
+    id: `cup-${Date.now()}`,
+    code,
+    discount: input.discount,
+    starts_at: input.starts_at,
+    expiration: input.expiration,
+    active: true,
+  });
+
+  return { ok: true, message: `Cupón ${code} creado.` };
+}
+
+export async function toggleCoupon(id: string): Promise<boolean> {
+  const coupon = mockCoupons.find((c) => c.id === id);
+  if (!coupon) return false;
+
+  coupon.active = !coupon.active;
+  return true;
+}
+
+export async function deleteCoupon(id: string): Promise<boolean> {
+  const index = mockCoupons.findIndex((c) => c.id === id);
+  if (index === -1) return false;
+
+  mockCoupons.splice(index, 1);
+  return true;
 }

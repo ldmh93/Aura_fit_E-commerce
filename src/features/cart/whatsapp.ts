@@ -1,10 +1,13 @@
-import { BUSINESS, WHATSAPP } from "@/lib/config";
+import { DELIVERY, WHATSAPP } from "@/lib/config";
 import type { CartItem } from "@/types";
 import { formatPrice } from "@/utils";
 
 /**
- * Genera el mensaje de pedido que se envía por WhatsApp.
- * El formato lo lee una persona: debe quedar claro y ordenado.
+ * Mensaje de pedido que se envía por WhatsApp.
+ * Lo lee una persona: tiene que quedar claro y ordenado.
+ *
+ * No incluye envío ni dirección: la entrega se acuerda en un punto
+ * de encuentro. Ver .claude/business-rules.md
  */
 export function buildOrderMessage({
   items,
@@ -36,32 +39,25 @@ export function buildOrderMessage({
     lines.push(`   Color: ${item.color}`);
     lines.push(`   Cantidad: ${item.quantity}`);
     lines.push(`   Precio: ${formatPrice(item.unit_price * item.quantity)}`);
-    lines.push(`   SKU: ${item.sku}`);
     lines.push("");
   });
 
-  lines.push(`Subtotal: ${formatPrice(subtotal)}`);
-
   if (discount > 0) {
-    lines.push(`Descuento${couponCode ? ` (${couponCode})` : ""}: -${formatPrice(discount)}`);
+    lines.push(`Subtotal: ${formatPrice(subtotal)}`);
+    lines.push(
+      `Descuento${couponCode ? ` (${couponCode})` : ""}: -${formatPrice(discount)}`,
+    );
   }
 
-  const shipping =
-    total >= BUSINESS.freeShippingThreshold ? 0 : BUSINESS.shippingCost;
-
-  lines.push(
-    shipping === 0
-      ? "Envío: Gratis"
-      : `Envío estimado: ${formatPrice(shipping)}`,
-  );
-  lines.push(`Total: ${formatPrice(total + shipping)}`);
+  lines.push(`Total: ${formatPrice(total)}`);
   lines.push("");
 
   if (customerName) lines.push(`Mi nombre: ${customerName}`);
   if (orderNumber) lines.push(`Pedido: ${orderNumber}`);
   if (customerName || orderNumber) lines.push("");
 
-  lines.push("¿Está disponible?");
+  lines.push(`Entrega: ${DELIVERY.method}`);
+  lines.push("¿Está disponible? ¿Dónde nos podemos ver?");
 
   return lines.join("\n");
 }
@@ -71,7 +67,7 @@ export function whatsappUrl(message: string): string {
   return `https://wa.me/${WHATSAPP.number}?text=${encodeURIComponent(message)}`;
 }
 
-/** Mensaje genérico del botón flotante. */
+/** Mensaje genérico del botón flotante y de los enlaces de contacto. */
 export function generalWhatsappUrl(context?: string): string {
   const message = context
     ? `${WHATSAPP.greeting}\n\nTengo una pregunta sobre: ${context}`

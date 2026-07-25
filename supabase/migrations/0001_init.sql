@@ -1,5 +1,8 @@
 -- ─────────────────────────────────────────────────────────────
 -- AURA FIT — Esquema inicial
+--
+-- Todavía NO está conectado: la app corre sobre `src/lib/mock-data.ts`.
+-- Este archivo es el destino, para que la migración sea copiar y pegar.
 -- Ver .claude/database-schema.md
 -- ─────────────────────────────────────────────────────────────
 
@@ -10,19 +13,28 @@ do $$ begin
   create type product_status as enum ('activo', 'oculto', 'agotado');
 exception when duplicate_object then null; end $$;
 
+-- No hay envíos: la entrega es en punto de encuentro.
 do $$ begin
   create type order_status as enum (
-    'pendiente', 'confirmado', 'pagado', 'enviado', 'finalizado', 'cancelado'
+    'pendiente', 'confirmado', 'pagado', 'entregado', 'cancelado'
   );
 exception when duplicate_object then null; end $$;
 
+do $$ begin
+  create type product_fit as enum ('superior', 'inferior');
+exception when duplicate_object then null; end $$;
+
 -- ── categories ───────────────────────────────────────────────
+-- Única taxonomía del catálogo. Arranca con Hombre y Mujer.
 create table if not exists public.categories (
-  id          uuid primary key default gen_random_uuid(),
-  name        text not null,
-  slug        text not null unique,
-  image       text not null default '',
-  created_at  timestamptz not null default now()
+  id           uuid primary key default gen_random_uuid(),
+  name         text not null,
+  slug         text not null unique,
+  description  text not null default '',
+  image        text not null default '',
+  active       boolean not null default true,
+  sort_order   integer not null default 1,
+  created_at   timestamptz not null default now()
 );
 
 -- ── products ─────────────────────────────────────────────────
@@ -39,9 +51,7 @@ create table if not exists public.products (
   images       text[] not null default '{}',
   video        text,
   category_id  uuid references public.categories(id) on delete set null,
-  collection   text not null default 'aura-essential',
-  gender       text not null default 'unisex'
-               check (gender in ('hombre', 'mujer', 'unisex')),
+  fit          product_fit not null default 'superior',
   sizes        text[] not null default '{}',
   colors       jsonb not null default '[]'::jsonb,
   -- Derivado de inventory por trigger. No escribir a mano.
@@ -53,7 +63,6 @@ create table if not exists public.products (
 
 create index if not exists products_slug_idx on public.products (slug);
 create index if not exists products_status_idx on public.products (status);
-create index if not exists products_collection_idx on public.products (collection);
 create index if not exists products_category_idx on public.products (category_id);
 
 -- ── inventory ────────────────────────────────────────────────
@@ -69,7 +78,7 @@ create table if not exists public.inventory (
 create index if not exists inventory_product_idx on public.inventory (product_id);
 
 -- ── orders ───────────────────────────────────────────────────
-create sequence if not exists public.order_number_seq start 1;
+create sequence if not exists public.order_number_seq start 121;
 
 create table if not exists public.orders (
   id             uuid primary key default gen_random_uuid(),
@@ -83,6 +92,8 @@ create table if not exists public.orders (
   total          numeric(10,2) not null default 0,
   coupon_code    text,
   status         order_status not null default 'pendiente',
+  -- Dónde y cuándo se entrega. Sustituye a la dirección de envío.
+  meeting_point  text,
   notes          text,
   created_at     timestamptz not null default now()
 );
@@ -97,9 +108,27 @@ create table if not exists public.coupons (
   discount    integer not null check (discount between 1 and 100),
   starts_at   timestamptz not null default now(),
   expiration  timestamptz not null,
-  product_id  uuid references public.products(id) on delete cascade,
   active      boolean not null default true
 );
+
+-- ── store_settings ───────────────────────────────────────────
+-- Una sola fila. Reemplaza a `.data/settings.json`.
+create table if not exists public.store_settings (
+  id                   integer primary key default 1 check (id = 1),
+  store_name           text not null default 'AURA FIT',
+  tagline              text not null default 'Performance Wear',
+  whatsapp_number      text not null default '524171279042',
+  whatsapp_display     text not null default '417 127 9042',
+  meeting_point_note   text not null default '',
+  support_hours        text not null default '',
+  announcement         text not null default '',
+  announcement_active  boolean not null default true,
+  low_stock_threshold  integer not null default 3,
+  updated_at           timestamptz not null default now()
+);
+
+insert into public.store_settings (id) values (1)
+on conflict (id) do nothing;
 
 -- ── Trigger: mantener products.stock sincronizado ────────────
 create or replace function public.sync_product_stock()
@@ -136,16 +165,17 @@ after insert or update or delete on public.inventory
 for each row execute function public.sync_product_stock();
 
 -- ── Row Level Security ───────────────────────────────────────
-alter table public.categories enable row level security;
-alter table public.products   enable row level security;
-alter table public.inventory  enable row level security;
-alter table public.orders     enable row level security;
-alter table public.coupons    enable row level security;
+alter table public.categories      enable row level security;
+alter table public.products        enable row level security;
+alter table public.inventory       enable row level security;
+alter table public.orders          enable row level security;
+alter table public.coupons         enable row level security;
+alter table public.store_settings  enable row level security;
 
 -- Lectura pública del catálogo
 drop policy if exists "categorias visibles" on public.categories;
 create policy "categorias visibles" on public.categories
-  for select using (true);
+  for select using (active = true or auth.role() = 'authenticated');
 
 drop policy if exists "productos publicos" on public.products;
 create policy "productos publicos" on public.products
@@ -158,6 +188,10 @@ create policy "inventario visible" on public.inventory
 drop policy if exists "cupones vigentes visibles" on public.coupons;
 create policy "cupones vigentes visibles" on public.coupons
   for select using (active = true and expiration > now());
+
+drop policy if exists "ajustes visibles" on public.store_settings;
+create policy "ajustes visibles" on public.store_settings
+  for select using (true);
 
 -- Escritura solo para el administrador autenticado
 drop policy if exists "admin escribe categorias" on public.categories;
@@ -178,6 +212,11 @@ create policy "admin escribe inventario" on public.inventory
 drop policy if exists "admin escribe cupones" on public.coupons;
 create policy "admin escribe cupones" on public.coupons
   for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+drop policy if exists "admin escribe ajustes" on public.store_settings;
+create policy "admin escribe ajustes" on public.store_settings
+  for update using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
 
 -- Pedidos: el cliente anónimo puede crear, solo el admin puede leer

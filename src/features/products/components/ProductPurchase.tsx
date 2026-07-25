@@ -17,11 +17,10 @@ import { cn, formatPrice } from "@/utils";
  */
 export function ProductPurchase({
   product,
-  guideType,
 }: {
   product: ProductWithInventory;
-  guideType: "superior" | "inferior";
 }) {
+  const guideType = product.fit;
   const addItem = useCartStore((state) => state.addItem);
 
   const [color, setColor] = useState(product.colors[0]?.name ?? "");
@@ -244,9 +243,6 @@ export function ProductPurchase({
       <div className="flex flex-wrap gap-2">
         <Badge tone="muted">SKU {product.sku}</Badge>
         <Badge tone="muted">{product.material}</Badge>
-        {product.price >= BUSINESS.freeShippingThreshold ? (
-          <Badge tone="success">Envío gratis</Badge>
-        ) : null}
       </div>
 
       {/* Barra de compra fija — solo móvil */}

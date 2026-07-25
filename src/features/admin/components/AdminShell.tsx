@@ -10,8 +10,10 @@ import {
   LogOut,
   Menu,
   Package,
+  Settings,
   ShoppingCart,
   Store,
+  Tags,
   Ticket,
   X,
 } from "lucide-react";
@@ -19,12 +21,33 @@ import { Wordmark } from "@/components/shared/Logo";
 import { logoutAction } from "@/features/admin/auth.actions";
 import { cn } from "@/utils";
 
-const links = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/productos", label: "Productos", icon: Package },
-  { href: "/admin/inventario", label: "Inventario", icon: Boxes },
-  { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
-  { href: "/admin/cupones", label: "Cupones", icon: Ticket },
+const groups = [
+  {
+    label: "General",
+    links: [
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/admin/estadisticas", label: "Estadísticas", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Catálogo",
+    links: [
+      { href: "/admin/productos", label: "Productos", icon: Package },
+      { href: "/admin/categorias", label: "Categorías", icon: Tags },
+      { href: "/admin/inventario", label: "Inventario", icon: Boxes },
+    ],
+  },
+  {
+    label: "Ventas",
+    links: [
+      { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
+      { href: "/admin/cupones", label: "Cupones", icon: Ticket },
+    ],
+  },
+  {
+    label: "Tienda",
+    links: [{ href: "/admin/ajustes", label: "Ajustes", icon: Settings }],
+  },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
@@ -38,35 +61,45 @@ export function AdminShell({ children }: { children: ReactNode }) {
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center border-b border-white/8 px-5">
         <Wordmark size="sm" />
-        <span className="ml-auto flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-aura">
-          <BarChart3 className="h-3 w-3" />
+        <span className="ml-auto text-[10px] uppercase tracking-[0.18em] text-aura">
           Admin
         </span>
       </div>
 
-      <nav className="flex-1 space-y-1 p-3">
-        {links.map((link) => {
-          const active = link.exact
-            ? pathname === link.href
-            : pathname.startsWith(link.href);
+      <nav className="flex-1 space-y-6 overflow-y-auto p-3">
+        {groups.map((group) => (
+          <div key={group.label}>
+            <p className="mb-2 px-3 text-[10px] uppercase tracking-[0.18em] text-mist/60">
+              {group.label}
+            </p>
+            <ul className="space-y-1">
+              {group.links.map((link) => {
+                const active =
+                  "exact" in link && link.exact
+                    ? pathname === link.href
+                    : pathname.startsWith(link.href);
 
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                active
-                  ? "bg-aura/10 text-aura"
-                  : "text-mist hover:bg-white/5 hover:text-white",
-              )}
-            >
-              <link.icon className="h-4 w-4" aria-hidden />
-              {link.label}
-            </Link>
-          );
-        })}
+                return (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      onClick={() => setOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                        active
+                          ? "bg-aura/10 text-aura"
+                          : "text-mist hover:bg-white/5 hover:text-white",
+                      )}
+                    >
+                      <link.icon className="h-4 w-4" aria-hidden />
+                      {link.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       <div className="space-y-1 border-t border-white/8 p-3">
@@ -96,7 +129,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
         {sidebar}
       </aside>
 
-      {/* Barra móvil */}
       <div className="flex h-16 items-center gap-3 border-b border-white/8 px-5 lg:hidden">
         <button
           type="button"

@@ -3,59 +3,69 @@
 ## Fase 1 — Fundación ✅
 
 - [x] Documentación de contexto en `.claude/`
-- [x] Scaffold Next.js 15 + TypeScript + Tailwind v4
+- [x] Next.js 15 + TypeScript + Tailwind v4
 - [x] Design system y tokens de marca
-- [x] Capa de servicios con fallback a datos mock
+- [x] Capa de servicios como única puerta a los datos
 
 ## Fase 2 — Tienda ✅
 
-- [x] Layout global: Navbar, Footer, botón flotante de WhatsApp
-- [x] Home premium: hero, colecciones, destacados
-- [x] Catálogo `/shop` con filtros (categoría, género, talla, color, precio, stock)
-- [x] Página de producto `/producto/[slug]` con galería, variantes y guía de tallas
-- [x] Carrito con Zustand + persistencia en localStorage
-- [x] Checkout por WhatsApp con mensaje pre-formateado
+- [x] Layout global: Navbar con barra de aviso, Footer, botón de WhatsApp
+- [x] Home simplificada para catálogo pequeño
+- [x] Catálogo `/shop` con filtros ligeros
+- [x] Categorías `/categoria/hombre` y `/categoria/mujer`
+- [x] Ficha de producto con galería, variantes reales y guía de tallas
+- [x] Carrito con Zustand + persistencia
+- [x] Checkout por WhatsApp con punto de encuentro
+- [x] Barra de compra fija en móvil
 
-## Fase 3 — Administración ✅
+## Fase 3 — Panel administrativo ✅
 
-- [x] Login de administrador con Supabase Auth
-- [x] Middleware de protección de `/admin`
-- [x] Dashboard con métricas y gráficas
-- [x] CRUD de productos
-- [x] Inventario por talla y color con alertas
-- [x] Gestión de pedidos y estados
-- [x] Módulo de cupones
+- [x] Dashboard con avisos accionables, KPIs y gráfica
+- [x] Estadísticas: ingresos por día y mes, ventas por categoría, top productos
+- [x] Productos: alta, edición, búsqueda, mostrar/ocultar, eliminar
+- [x] Categorías: CRUD con validación de productos asignados
+- [x] Inventario: ajuste rápido ±1, cantidad exacta, alertas y búsqueda
+- [x] Pedidos: filtro por estado, búsqueda, punto de encuentro y notas
+- [x] Cupones: alta, activar/desactivar, eliminar
+- [x] Ajustes de la tienda editables
 
-## Fase 4 — Crecimiento ✅
+## Fase 4 — Contenido y SEO ✅
 
-- [x] Meta Pixel (ViewContent, AddToCart, InitiateCheckout, Purchase)
-- [x] Google Analytics 4
-- [x] Metadata dinámica, Open Graph, Twitter Cards
+- [x] Páginas: cómo comprar, entregas, guía de tallas, cambios, contacto
+- [x] Metadata dinámica, Open Graph, Twitter Cards, JSON-LD de producto
 - [x] `sitemap.xml` y `robots.txt`
-- [x] Migraciones SQL + seed + RLS
+- [x] Meta Pixel y GA4 (se activan solo con ID configurado)
 
-## Fase 5 — Pendiente
+## Fase 5 — Supabase 🔜 (siguiente)
 
-- [ ] Conectar proyecto real de Supabase y cargar catálogo real
-- [ ] Subir fotografía de producto definitiva a Supabase Storage
-- [ ] Configurar `NEXT_PUBLIC_META_PIXEL_ID` y `NEXT_PUBLIC_GA_ID` reales
-- [ ] Deploy en Vercel + dominio `aurafit.com`
-- [ ] Optimización de Core Web Vitals con datos reales
+- [ ] Crear proyecto y llenar `.env.local`
+- [ ] Ejecutar `0001_init.sql` y `0002_storage.sql`
+- [ ] Reescribir el interior de los seis servicios para leer de Supabase
+- [ ] Mover los ajustes de `.data/settings.json` a `store_settings`
+- [ ] Activar Supabase Auth en `/admin/login` y el middleware
+- [ ] Subir la fotografía real de producto al bucket `productos`
+- [ ] Cargar el catálogo real
 
-## Hecho después de la Fase 4
+## Fase 6 — Publicación
 
-- [x] Subida de fotos desde `/admin/productos` a Supabase Storage
-      (bucket `productos`, ver `supabase/migrations/0002_storage.sql`)
-- [x] Barra de compra fija en móvil en la página de producto
-- [x] Tarjetas en lugar de tablas anchas en el admin móvil
+- [ ] Deploy en Vercel
+- [ ] Dominio propio
+- [ ] Configurar `NEXT_PUBLIC_META_PIXEL_ID` y `NEXT_PUBLIC_GA_ID`
+- [ ] Revisar Core Web Vitals con datos reales
 
 ## Futuras mejoras (arquitectura ya preparada)
 
-- [ ] Mercado Pago
-- [ ] Stripe
+- [ ] Mercado Pago / Stripe
 - [ ] Cuentas de cliente
 - [ ] Wishlist
-- [ ] Facturación
 - [ ] Programa de puntos
-- [ ] Suscripciones
 - [ ] App móvil
+
+---
+
+## Versiones guardadas
+
+| Rama                 | Qué es                                                   |
+| -------------------- | -------------------------------------------------------- |
+| `main`               | Tienda simplificada para catálogo pequeño (actual)       |
+| `diseno-v1-premium`  | Primera versión: 5 colecciones, filtros amplios, envíos  |

@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, Search, ShoppingBag, X } from "lucide-react";
+import { Menu, ShoppingBag, X } from "lucide-react";
 import { LogoLink } from "@/components/shared/Logo";
 import { NAV_LINKS } from "@/lib/config";
 import { useCartStore } from "@/features/cart/store";
 import { cn } from "@/utils";
 
-export function Navbar() {
+export function Navbar({ announcement }: { announcement?: string }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -17,7 +17,12 @@ export function Navbar() {
 
   const items = useCartStore((state) => state.items);
   const openCart = useCartStore((state) => state.openCart);
-  const count = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // El conteo solo se usa después de montar: el carrito vive en localStorage
+  // y en el servidor siempre es cero.
+  const count = mounted
+    ? items.reduce((sum, item) => sum + item.quantity, 0)
+    : 0;
 
   useEffect(() => setMounted(true), []);
 
@@ -46,6 +51,14 @@ export function Navbar() {
           : "border-b border-transparent bg-transparent",
       )}
     >
+      {announcement ? (
+        <div className="border-b border-white/6 bg-graphite/60 py-2 text-center">
+          <p className="container-aura text-[11px] uppercase tracking-[0.16em] text-silver">
+            {announcement}
+          </p>
+        </div>
+      ) : null}
+
       <nav className="container-aura flex h-18 items-center justify-between gap-6 py-4">
         <div className="flex items-center gap-10">
           <LogoLink />
@@ -73,22 +86,16 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-1">
-          <Link
-            href="/shop"
-            aria-label="Buscar productos"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-mist transition-colors hover:bg-white/5 hover:text-white"
-          >
-            <Search className="h-[18px] w-[18px]" />
-          </Link>
-
           <button
             type="button"
             onClick={openCart}
-            aria-label={`Abrir carrito${count ? `, ${count} artículos` : ""}`}
+            aria-label={
+              count > 0 ? `Abrir pedido, ${count} artículos` : "Abrir pedido"
+            }
             className="relative flex h-10 w-10 items-center justify-center rounded-full text-mist transition-colors hover:bg-white/5 hover:text-white"
           >
             <ShoppingBag className="h-[18px] w-[18px]" />
-            {mounted && count > 0 ? (
+            {count > 0 ? (
               <span className="tabular absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-aura px-1 text-[10px] font-semibold text-void">
                 {count}
               </span>
@@ -128,18 +135,16 @@ export function Navbar() {
         </div>
 
         <ul className="container-aura mt-8 flex flex-col gap-1">
-          {[{ href: "/shop", label: "Toda la tienda" }, ...NAV_LINKS].map(
-            (link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className="block border-b border-white/6 py-5 text-2xl font-semibold uppercase tracking-tight text-white transition-colors hover:text-aura"
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ),
-          )}
+          {NAV_LINKS.map((link) => (
+            <li key={link.href}>
+              <Link
+                href={link.href}
+                className="block border-b border-white/6 py-5 text-2xl font-semibold uppercase tracking-tight text-white transition-colors hover:text-aura"
+              >
+                {link.label}
+              </Link>
+            </li>
+          ))}
         </ul>
       </div>
     </header>

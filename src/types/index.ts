@@ -2,28 +2,22 @@
  * Tipos de dominio de AURA FIT.
  * Fuente única de verdad — no redefinir estas formas en features.
  * Ver .claude/database-schema.md
+ *
+ * La tienda maneja UNA sola taxonomía: categorías (Hombre / Mujer).
+ * No hay colecciones ni campo de género: sería la misma información dos veces.
  */
 
 export type ProductStatus = "activo" | "oculto" | "agotado";
 
+/** No hay envíos: los pedidos se entregan en punto de encuentro. */
 export type OrderStatus =
   | "pendiente"
   | "confirmado"
   | "pagado"
-  | "enviado"
-  | "finalizado"
+  | "entregado"
   | "cancelado";
 
-export type Gender = "hombre" | "mujer" | "unisex";
-
-export type Size = "XS" | "S" | "M" | "L" | "XL" | "XXL";
-
-export type CollectionSlug =
-  | "aura-performance"
-  | "aura-street"
-  | "aura-women"
-  | "aura-essential"
-  | "limited-edition";
+export type Size = "XS" | "S" | "M" | "L" | "XL";
 
 export interface ProductColor {
   name: string;
@@ -34,16 +28,11 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
-  image: string;
-  created_at?: string;
-}
-
-export interface Collection {
-  slug: CollectionSlug;
-  name: string;
-  tagline: string;
   description: string;
   image: string;
+  active: boolean;
+  sort_order: number;
+  created_at?: string;
 }
 
 export interface Product {
@@ -60,8 +49,9 @@ export interface Product {
   video: string | null;
   category_id: string;
   category_name?: string;
-  collection: CollectionSlug;
-  gender: Gender;
+  category_slug?: string;
+  /** Tipo de prenda: define qué tabla de medidas se muestra. */
+  fit: "superior" | "inferior";
   sizes: Size[];
   colors: ProductColor[];
   stock: number;
@@ -84,7 +74,7 @@ export interface ProductWithInventory extends Product {
 }
 
 export interface CartItem {
-  /** `${productId}-${size}-${color}` — identifica la variante. */
+  /** `${productId}__${size}__${color}` — identifica la variante. */
   key: string;
   product_id: string;
   name: string;
@@ -120,6 +110,8 @@ export interface Order {
   total: number;
   coupon_code: string | null;
   status: OrderStatus;
+  /** Punto de encuentro acordado con el cliente. */
+  meeting_point: string | null;
   notes: string | null;
   created_at: string;
 }
@@ -130,14 +122,11 @@ export interface Coupon {
   discount: number;
   starts_at: string;
   expiration: string;
-  product_id: string | null;
   active: boolean;
 }
 
 export interface ProductFilters {
   category?: string;
-  collection?: string;
-  gender?: Gender;
   size?: Size;
   color?: string;
   minPrice?: number;
@@ -147,14 +136,36 @@ export interface ProductFilters {
   sort?: "nuevo" | "precio-asc" | "precio-desc" | "nombre";
 }
 
+/** Ajustes editables desde /admin/ajustes. */
+export interface StoreSettings {
+  storeName: string;
+  tagline: string;
+  whatsappNumber: string;
+  whatsappDisplay: string;
+  meetingPointNote: string;
+  supportHours: string;
+  announcement: string;
+  announcementActive: boolean;
+  lowStockThreshold: number;
+  updated_at: string;
+}
+
 export interface DashboardStats {
-  monthRevenue: number;
-  monthOrders: number;
+  revenueMonth: number;
+  revenuePrevMonth: number;
+  ordersMonth: number;
+  ordersPending: number;
+  averageTicket: number;
+  unitsSoldMonth: number;
   activeProducts: number;
+  hiddenProducts: number;
   outOfStockProducts: number;
-  pendingOrders: number;
   lowStockVariants: number;
+  inventoryUnits: number;
+  inventoryValue: number;
   revenueByDay: { date: string; total: number }[];
+  revenueByMonth: { month: string; total: number }[];
   ordersByStatus: { status: OrderStatus; count: number }[];
-  topProducts: { name: string; units: number }[];
+  salesByCategory: { category: string; units: number; revenue: number }[];
+  topProducts: { name: string; units: number; revenue: number }[];
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { InfoBlock, InfoPage } from "@/components/shared/InfoPage";
-import { BUSINESS, SITE } from "@/lib/config";
+import { BUSINESS, DELIVERY, SITE } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Términos y condiciones",
@@ -17,33 +17,43 @@ export default function TerminosPage() {
     >
       <InfoBlock title="Precios">
         <p>
-          Todos los precios están expresados en pesos mexicanos (MXN) e incluyen
-          IVA. Los precios pueden cambiar sin previo aviso, pero el precio
-          confirmado al momento de tu pedido es el que se respeta.
+          Todos los precios están en pesos mexicanos (MXN) e incluyen IVA. No se
+          cobra ningún costo adicional por la entrega. Los precios pueden
+          cambiar sin previo aviso, pero se respeta el confirmado al momento de
+          tu pedido.
+        </p>
+      </InfoBlock>
+
+      <InfoBlock title="Entrega">
+        <p>{DELIVERY.description}</p>
+        <p>
+          El punto y el horario se acuerdan por WhatsApp. Los pedidos
+          confirmados se apartan durante 48 horas; pasado ese plazo sin
+          respuesta, el inventario se libera.
         </p>
       </InfoBlock>
 
       <InfoBlock title="Disponibilidad">
         <p>
-          El inventario mostrado es en tiempo real, pero puede haber diferencias
-          si dos personas compran la misma pieza al mismo tiempo. Confirmamos
-          disponibilidad por WhatsApp antes de procesar el pago.
+          El inventario mostrado es el real, pero puede haber diferencias si dos
+          personas piden la misma pieza al mismo tiempo. Confirmamos
+          disponibilidad por WhatsApp antes de cerrar la venta.
         </p>
       </InfoBlock>
 
       <InfoBlock title="Cupones">
         <p>
-          Los cupones no son acumulables. Solo se puede aplicar un código por
-          pedido y el descuento máximo es de {BUSINESS.maxCouponDiscount}%. Los
-          códigos vencidos o inactivos se rechazan automáticamente.
+          Los cupones no son acumulables. Solo se aplica un código por pedido y
+          el descuento máximo es de {BUSINESS.maxCouponDiscount}%. Los códigos
+          vencidos o inactivos se rechazan automáticamente.
         </p>
       </InfoBlock>
 
-      <InfoBlock title="Proceso de compra">
+      <InfoBlock title="Cambios">
         <p>
-          El pedido se envía por WhatsApp y queda en estado pendiente hasta que
-          confirmamos disponibilidad y recibimos el pago. Los pedidos sin
-          respuesta por más de 48 horas se cancelan y el inventario se libera.
+          Cambio de talla sin costo dentro de {BUSINESS.changeWindowDays} días,
+          una vez por pedido, siempre que la prenda esté sin uso y con
+          etiquetas.
         </p>
       </InfoBlock>
     </InfoPage>

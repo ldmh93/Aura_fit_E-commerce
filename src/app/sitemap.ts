@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getAllProductSlugs } from "@/services/products.service";
 import { getCategories } from "@/services/categories.service";
-import { COLLECTIONS, SITE } from "@/lib/config";
+import { SITE } from "@/lib/config";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [products, categories] = await Promise.all([
@@ -19,7 +19,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 0.9,
     },
-    ...["guia-de-tallas", "envios", "cambios", "contacto"].map((path) => ({
+    ...[
+      "como-comprar",
+      "entregas",
+      "guia-de-tallas",
+      "cambios",
+      "contacto",
+      "privacidad",
+      "terminos",
+    ].map((path) => ({
       url: `${SITE.url}/${path}`,
       lastModified: now,
       changeFrequency: "monthly" as const,
@@ -27,20 +35,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
-  const collectionRoutes: MetadataRoute.Sitemap = COLLECTIONS.map(
-    (collection) => ({
-      url: `${SITE.url}/colecciones/${collection.slug}`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    }),
-  );
-
   const categoryRoutes: MetadataRoute.Sitemap = categories.map((category) => ({
-    url: `${SITE.url}/shop?category=${category.slug}`,
+    url: `${SITE.url}/categoria/${category.slug}`,
     lastModified: now,
     changeFrequency: "weekly",
-    priority: 0.6,
+    priority: 0.8,
   }));
 
   const productRoutes: MetadataRoute.Sitemap = products.map((product) => ({
@@ -50,10 +49,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [
-    ...staticRoutes,
-    ...collectionRoutes,
-    ...categoryRoutes,
-    ...productRoutes,
-  ];
+  return [...staticRoutes, ...categoryRoutes, ...productRoutes];
 }

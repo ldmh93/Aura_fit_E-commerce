@@ -6,6 +6,9 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -13,6 +16,11 @@ import {
 } from "recharts";
 import type { DashboardStats } from "@/types";
 import { formatAmount } from "@/utils";
+
+/**
+ * Gráficas del panel. Recharts pesa, así que este módulo se carga de forma
+ * diferida desde `charts.ts` y nunca entra al bundle de la tienda.
+ */
 
 const axis = {
   stroke: "#8A93A0",
@@ -29,7 +37,13 @@ const tooltipStyle = {
   color: "#fff",
 };
 
-export function RevenueChart({ data }: { data: DashboardStats["revenueByDay"] }) {
+const PIE_COLORS = ["#5EA8FF", "#C7D7E8", "#3FD9A0", "#8A93A0", "#E8C46A"];
+
+export function RevenueChart({
+  data,
+}: {
+  data: DashboardStats["revenueByDay"];
+}) {
   return (
     <div className="h-64 w-full px-2 py-4">
       <ResponsiveContainer width="100%" height="100%">
@@ -65,10 +79,38 @@ export function RevenueChart({ data }: { data: DashboardStats["revenueByDay"] })
   );
 }
 
-export function TopProductsChart({
+export function MonthlyChart({
   data,
 }: {
-  data: DashboardStats["topProducts"];
+  data: DashboardStats["revenueByMonth"];
+}) {
+  return (
+    <div className="h-64 w-full px-2 py-4">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 8, right: 12, left: -12, bottom: 0 }}>
+          <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+          <XAxis dataKey="month" {...axis} />
+          <YAxis
+            {...axis}
+            tickFormatter={(value: number) => formatAmount(value)}
+            width={72}
+          />
+          <Tooltip
+            contentStyle={tooltipStyle}
+            formatter={(value: number) => [formatAmount(value), "Ingresos"]}
+            cursor={{ fill: "rgba(94,168,255,0.08)" }}
+          />
+          <Bar dataKey="total" fill="#5EA8FF" radius={[6, 6, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export function CategoryChart({
+  data,
+}: {
+  data: DashboardStats["salesByCategory"];
 }) {
   if (!data.length) {
     return (
@@ -79,31 +121,33 @@ export function TopProductsChart({
   }
 
   return (
-    <div className="h-64 w-full px-2 py-4">
+    <div className="h-64 w-full py-4">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ top: 4, right: 16, left: 8, bottom: 0 }}
-        >
-          <CartesianGrid stroke="rgba(255,255,255,0.05)" horizontal={false} />
-          <XAxis type="number" {...axis} allowDecimals={false} />
-          <YAxis
-            type="category"
-            dataKey="name"
-            {...axis}
-            width={140}
-            tickFormatter={(value: string) =>
-              value.length > 20 ? `${value.slice(0, 19)}…` : value
-            }
-          />
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="revenue"
+            nameKey="category"
+            innerRadius={52}
+            outerRadius={84}
+            paddingAngle={3}
+            stroke="none"
+          >
+            {data.map((entry, index) => (
+              <Cell
+                key={entry.category}
+                fill={PIE_COLORS[index % PIE_COLORS.length]}
+              />
+            ))}
+          </Pie>
           <Tooltip
             contentStyle={tooltipStyle}
-            formatter={(value: number) => [`${value} piezas`, "Vendidas"]}
-            cursor={{ fill: "rgba(94,168,255,0.08)" }}
+            formatter={(value: number, name: string) => [
+              formatAmount(value),
+              name,
+            ]}
           />
-          <Bar dataKey="units" fill="#C7D7E8" radius={[0, 6, 6, 0]} />
-        </BarChart>
+        </PieChart>
       </ResponsiveContainer>
     </div>
   );

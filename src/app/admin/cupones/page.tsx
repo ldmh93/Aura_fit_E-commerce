@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import {
   AdminPage,
   EmptyState,
@@ -7,7 +8,10 @@ import {
 } from "@/features/admin/components/AdminUI";
 import { Badge } from "@/components/ui/Badge";
 import { CouponForm } from "@/features/admin/components/CouponForm";
-import { toggleCouponAction } from "@/features/admin/actions";
+import {
+  deleteCouponAction,
+  toggleCouponAction,
+} from "@/features/admin/actions";
 import { getCoupons } from "@/services/coupons.service";
 import { BUSINESS } from "@/lib/config";
 import { formatDate } from "@/utils";
@@ -30,7 +34,7 @@ export default async function AdminCouponsPage() {
           </div>
         </Panel>
 
-        <Panel title="Cupones existentes">
+        <Panel title={`${coupons.length} cupones`}>
           {coupons.length === 0 ? (
             <EmptyState message="No hay cupones creados." />
           ) : (
@@ -42,7 +46,7 @@ export default async function AdminCouponsPage() {
                     <Th>Descuento</Th>
                     <Th>Vigencia</Th>
                     <Th>Estado</Th>
-                    <Th>Acción</Th>
+                    <Th>Acciones</Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/6">
@@ -71,24 +75,36 @@ export default async function AdminCouponsPage() {
                           )}
                         </Td>
                         <Td>
-                          <form action={toggleCouponAction}>
-                            <input
-                              type="hidden"
-                              name="id"
-                              value={coupon.id}
-                            />
-                            <input
-                              type="hidden"
-                              name="active"
-                              value={String(coupon.active)}
-                            />
-                            <button
-                              type="submit"
-                              className="rounded-lg border border-white/12 px-3 py-1.5 text-xs text-mist transition-colors hover:border-aura hover:text-aura"
-                            >
-                              {coupon.active ? "Desactivar" : "Activar"}
-                            </button>
-                          </form>
+                          <div className="flex items-center gap-2">
+                            <form action={toggleCouponAction}>
+                              <input
+                                type="hidden"
+                                name="id"
+                                value={coupon.id}
+                              />
+                              <button
+                                type="submit"
+                                className="rounded-lg border border-white/12 px-3 py-1.5 text-xs text-mist transition-colors hover:border-aura hover:text-aura"
+                              >
+                                {coupon.active ? "Desactivar" : "Activar"}
+                              </button>
+                            </form>
+
+                            <form action={deleteCouponAction}>
+                              <input
+                                type="hidden"
+                                name="id"
+                                value={coupon.id}
+                              />
+                              <button
+                                type="submit"
+                                aria-label={`Eliminar cupón ${coupon.code}`}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-mist transition-colors hover:bg-danger/10 hover:text-danger"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </form>
+                          </div>
                         </Td>
                       </tr>
                     );

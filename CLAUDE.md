@@ -5,15 +5,16 @@
 >
 > - `.claude/architecture.md` — estructura de carpetas y flujo de datos
 > - `.claude/design-system.md` — colores, tipografía, animaciones
-> - `.claude/database-schema.md` — tablas, RLS, índices
+> - `.claude/database-schema.md` — esquema destino de Supabase
 > - `.claude/development-rules.md` — reglas de código y seguridad
-> - `.claude/business-rules.md` — envíos, cambios, cupones, márgenes
+> - `.claude/business-rules.md` — entregas, cambios, cupones, márgenes
 > - `.claude/roadmap.md` — qué está hecho y qué falta
 
 ## Resumen
 
-Ecommerce premium de ropa deportiva **AURA FIT**. Next.js 15 (App Router),
-TypeScript, Tailwind v4, Supabase, checkout por WhatsApp y panel admin privado.
+Tienda de ropa deportiva **AURA FIT**, proveedor pequeño. Next.js 15,
+TypeScript, Tailwind v4. Pedidos por WhatsApp, entrega en punto de encuentro
+y panel administrativo completo.
 
 ## Comandos
 
@@ -26,14 +27,22 @@ npm run typecheck  # tsc --noEmit
 
 ## Reglas que no se negocian
 
-1. Ningún componente importa `@supabase/*`. Todo pasa por `src/services`.
+1. Ningún componente lee datos directamente. Todo pasa por `src/services`.
 2. Server Components por defecto; `"use client"` solo en hojas interactivas.
 3. Nada de `any`. TypeScript estricto.
-4. Colores solo desde los tokens (`bg-graphite`, `text-aura`, …), nunca hex sueltos.
+4. Colores solo desde los tokens (`bg-graphite`, `text-aura`, …).
 5. Mobile first. Contraste AA. Foco visible.
-6. `SUPABASE_SERVICE_ROLE_KEY` jamás llega al cliente.
+6. Toda entrada de usuario se valida en el servidor.
 
-## Sin Supabase configurado
+## Este negocio NO tiene
 
-La app arranca igual: los servicios caen a `src/lib/mock-data.ts`.
-Es el modo por defecto en local hasta que llenes `.env.local`.
+Nunca agregar a la interfaz: envíos a domicilio, costos de envío,
+paqueterías, direcciones de entrega, pasarela de pago, cuentas de cliente,
+colecciones ni campo de género. La única taxonomía es la categoría
+(Hombre / Mujer).
+
+## Estado de los datos
+
+Supabase **todavía no está conectado**. El catálogo vive en
+`src/lib/mock-data.ts` y los ajustes en `.data/settings.json`.
+El esquema destino ya está escrito en `supabase/migrations/`.

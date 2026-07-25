@@ -1,13 +1,20 @@
 # AURA FIT STORE
 
-Ecommerce premium de ropa deportiva **AURA FIT** — Performance Wear.
-Tienda tipo Shopify personalizada, con checkout por WhatsApp y panel
-administrativo privado.
+Tienda en línea de **AURA FIT**, proveedor de ropa deportiva.
+Catálogo corto, pedidos por WhatsApp y entrega en punto de encuentro.
+
+## Cómo funciona el negocio
+
+- Dos categorías: **Hombre** y **Mujer**.
+- El cliente arma su pedido **sin registrarse** y lo envía por WhatsApp.
+- **No hay envíos a domicilio.** La entrega se acuerda en un punto de
+  encuentro.
+- WhatsApp de contacto: **417 127 9042**.
 
 ## Stack
 
 Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS v4 ·
-Framer Motion · Zustand · Supabase (PostgreSQL + Auth + Storage) · Vercel
+Framer Motion · Zustand · Recharts · Vercel
 
 ## Arrancar
 
@@ -18,50 +25,41 @@ npm run dev
 
 Abre <http://localhost:3000>.
 
-**La app funciona sin configuración.** Si no hay credenciales de Supabase,
-los servicios usan el catálogo de demostración de `src/lib/mock-data.ts`.
-
-## Configurar Supabase
-
-1. Copia `.env.example` a `.env.local` y llena las variables.
-2. En el SQL Editor de Supabase ejecuta, en orden:
-   - `supabase/migrations/0001_init.sql` — tablas, trigger de stock y RLS
-   - `supabase/migrations/0002_storage.sql` — bucket `productos` para las fotos
-   - `supabase/seed.sql` (opcional, datos de arranque)
-3. Crea el usuario administrador en **Authentication → Users**.
-
-Con eso ya puedes subir las fotos de producto desde `/admin/productos`
-(arrastrar y soltar). Se guardan en Supabase Storage y quedan ligadas al
-producto — no hace falta tocar código.
-
-Variables mínimas:
-
-```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_WHATSAPP_NUMBER=5215500000000
-NEXT_PUBLIC_SITE_URL=https://aurafit.com
-```
-
-`NEXT_PUBLIC_WHATSAPP_NUMBER` va en formato internacional, sin `+` ni espacios.
+**La app funciona sin configurar nada.** Los datos viven en
+`src/lib/mock-data.ts` y los ajustes en `.data/settings.json`.
 
 ## Rutas
 
+### Tienda
+
 | Ruta                   | Descripción                                  |
 | ---------------------- | -------------------------------------------- |
-| `/`                    | Home con hero, colecciones y destacados      |
-| `/shop`                | Catálogo con filtros y orden                 |
-| `/producto/[slug]`     | Detalle: galería, variantes, guía de tallas  |
-| `/colecciones/[slug]`  | Landing por colección                        |
-| `/admin`               | Dashboard (protegido)                        |
-| `/admin/productos`     | CRUD de productos                            |
-| `/admin/inventario`    | Existencias por talla y color                |
-| `/admin/pedidos`       | Pedidos y cambio de estado                   |
-| `/admin/cupones`       | Alta y activación de cupones                 |
+| `/`                    | Portada: hero, cómo funciona, catálogo       |
+| `/shop`                | Catálogo completo con filtros                |
+| `/categoria/hombre`    | Categoría Hombre                             |
+| `/categoria/mujer`     | Categoría Mujer                              |
+| `/producto/[slug]`     | Ficha: galería, variantes, guía de tallas    |
+| `/como-comprar`        | Los tres pasos del proceso                   |
+| `/entregas`            | Cómo se acuerda el punto de encuentro        |
+| `/guia-de-tallas`      | Tablas de medidas                            |
+| `/cambios`             | Política de cambios                          |
+| `/contacto`            | WhatsApp y horarios                          |
 
-El acceso a `/admin` está protegido por middleware (Supabase Auth) y por RLS
-en la base de datos.
+### Panel administrativo
+
+| Ruta                   | Descripción                                       |
+| ---------------------- | ------------------------------------------------- |
+| `/admin`               | Dashboard: avisos, KPIs, gráfica, pedidos         |
+| `/admin/estadisticas`  | Ingresos, ventas por categoría, top productos     |
+| `/admin/productos`     | Alta, edición, búsqueda, mostrar/ocultar          |
+| `/admin/categorias`    | CRUD de categorías                                |
+| `/admin/inventario`    | Existencias por talla y color, ajuste rápido      |
+| `/admin/pedidos`       | Estados, punto de encuentro, notas, búsqueda      |
+| `/admin/cupones`       | Alta, activar/desactivar, eliminar                |
+| `/admin/ajustes`       | WhatsApp, aviso de entrega, umbral de stock       |
+
+> ⚠️ El panel todavía **no exige contraseña** porque Supabase Auth no está
+> conectado. No publicar el sitio hasta completar ese paso.
 
 ## Comandos
 
@@ -72,22 +70,38 @@ npm run start      # servidor de producción
 npm run typecheck  # tsc --noEmit
 ```
 
+## Siguiente paso: Supabase
+
+Todavía no está conectado, pero todo está preparado:
+
+- `supabase/migrations/0001_init.sql` — tablas, trigger de stock y RLS
+- `supabase/migrations/0002_storage.sql` — bucket `productos` para las fotos
+- `supabase/seed.sql` — datos de arranque
+- `src/lib/supabase/` — clientes de navegador, servidor y service role
+- `.env.example` — variables necesarias
+
+Al conectarlo solo cambia el **interior** de los seis archivos de
+`src/services/`: la interfaz no se entera.
+
 ## Documentación del proyecto
 
 El contexto completo vive en [`.claude/`](.claude/):
 
-| Archivo                 | Contenido                                    |
-| ----------------------- | -------------------------------------------- |
-| `project-context.md`    | Visión general, stack, identidad, reglas     |
-| `architecture.md`       | Estructura de carpetas y flujo de datos      |
-| `design-system.md`      | Colores, tipografía, componentes, animación  |
-| `database-schema.md`    | Tablas, RLS, índices                         |
-| `development-rules.md`  | Reglas de código, seguridad, rendimiento     |
-| `business-rules.md`     | Envíos, cambios, cupones, márgenes, tono     |
-| `roadmap.md`            | Qué está hecho y qué falta                   |
+| Archivo                 | Contenido                                   |
+| ----------------------- | ------------------------------------------- |
+| `project-context.md`    | Visión general, stack, identidad, reglas    |
+| `architecture.md`       | Carpetas y flujo de datos                   |
+| `design-system.md`      | Colores, tipografía, componentes, animación |
+| `database-schema.md`    | Tablas, RLS, índices                        |
+| `development-rules.md`  | Reglas de código, seguridad, rendimiento    |
+| `business-rules.md`     | Entregas, cambios, cupones, márgenes        |
+| `roadmap.md`            | Qué está hecho y qué falta                  |
 
-## Deploy
+## Versiones del diseño
 
-Vercel. Configura las mismas variables de entorno en el proyecto y apunta el
-dominio. `NEXT_PUBLIC_SITE_URL` debe ser el dominio final para que el sitemap
-y las URLs canónicas salgan correctas.
+| Rama                | Qué es                                                  |
+| ------------------- | ------------------------------------------------------- |
+| `main`              | Tienda simplificada para catálogo pequeño (actual)      |
+| `diseno-v1-premium` | Primera versión: 5 colecciones, filtros amplios, envíos |
+
+Para verla: `git checkout diseno-v1-premium`

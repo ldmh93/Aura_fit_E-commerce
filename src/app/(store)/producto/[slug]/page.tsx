@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, RefreshCw, ShieldCheck, Truck } from "lucide-react";
+import { ChevronRight, MapPin, MessageCircle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Reveal } from "@/components/shared/Reveal";
@@ -13,7 +13,7 @@ import {
   getProductBySlug,
   getRelatedProducts,
 } from "@/services/products.service";
-import { BUSINESS, COLLECTIONS, SITE } from "@/lib/config";
+import { BUSINESS, DELIVERY, SITE } from "@/lib/config";
 import { discountPercent, formatPrice } from "@/utils";
 
 export const revalidate = 120;
@@ -35,37 +35,26 @@ export async function generateMetadata({
 
   if (!product) return { title: "Producto no encontrado" };
 
-  const title = product.name;
   const description = product.description.slice(0, 155);
 
   return {
-    title,
+    title: product.name,
     description,
     alternates: { canonical: `/producto/${product.slug}` },
     openGraph: {
       type: "website",
-      title: `${title} | ${SITE.name}`,
+      title: `${product.name} | ${SITE.name}`,
       description,
       url: `${SITE.url}/producto/${product.slug}`,
       images: product.images.slice(0, 2).map((url) => ({ url })),
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} | ${SITE.name}`,
+      title: `${product.name} | ${SITE.name}`,
       description,
       images: product.images.slice(0, 1),
     },
   };
-}
-
-/** Prendas inferiores usan otra tabla de medidas. */
-function guideTypeFor(categoryName?: string): "superior" | "inferior" {
-  const lower = (categoryName ?? "").toLowerCase();
-  return ["shorts", "leggings", "joggers", "pants"].some((word) =>
-    lower.includes(word),
-  )
-    ? "inferior"
-    : "superior";
 }
 
 export default async function ProductPage({ params }: { params: Params }) {
@@ -75,7 +64,6 @@ export default async function ProductPage({ params }: { params: Params }) {
   if (!product || product.status === "oculto") notFound();
 
   const related = await getRelatedProducts(product, 4);
-  const collection = COLLECTIONS.find((c) => c.slug === product.collection);
   const discount = discountPercent(product.price, product.old_price);
   const soldOut = product.stock <= 0 || product.status === "agotado";
 
@@ -107,7 +95,6 @@ export default async function ProductPage({ params }: { params: Params }) {
 
       {/* pb extra en móvil: la barra de compra fija ocupa la parte baja */}
       <div className="container-aura py-10 pb-28 md:py-14 md:pb-14">
-        {/* Migas */}
         <nav aria-label="Ruta de navegación" className="mb-8">
           <ol className="flex flex-wrap items-center gap-1.5 text-xs text-mist">
             <li>
@@ -116,25 +103,19 @@ export default async function ProductPage({ params }: { params: Params }) {
               </Link>
             </li>
             <ChevronRight className="h-3 w-3" aria-hidden />
-            <li>
-              <Link href="/shop" className="transition-colors hover:text-white">
-                Tienda
-              </Link>
-            </li>
-            {collection ? (
+            {product.category_slug ? (
               <>
-                <ChevronRight className="h-3 w-3" aria-hidden />
                 <li>
                   <Link
-                    href={`/colecciones/${collection.slug}`}
+                    href={`/categoria/${product.category_slug}`}
                     className="transition-colors hover:text-white"
                   >
-                    {collection.name}
+                    {product.category_name}
                   </Link>
                 </li>
+                <ChevronRight className="h-3 w-3" aria-hidden />
               </>
             ) : null}
-            <ChevronRight className="h-3 w-3" aria-hidden />
             <li className="text-silver">{product.name}</li>
           </ol>
         </nav>
@@ -148,8 +129,8 @@ export default async function ProductPage({ params }: { params: Params }) {
 
           <div>
             <div className="mb-4 flex flex-wrap gap-2">
-              {collection ? (
-                <Badge tone="silver">{collection.name}</Badge>
+              {product.category_name ? (
+                <Badge tone="silver">{product.category_name}</Badge>
               ) : null}
               {discount > 0 ? <Badge tone="aura">−{discount}%</Badge> : null}
               {soldOut ? <Badge tone="muted">Agotado</Badge> : null}
@@ -176,16 +157,12 @@ export default async function ProductPage({ params }: { params: Params }) {
 
             <div className="hairline my-8" />
 
-            <ProductPurchase
-              product={product}
-              guideType={guideTypeFor(product.category_name)}
-            />
+            <ProductPurchase product={product} />
 
             <div className="hairline my-8" />
 
-            {/* Características técnicas */}
             <div>
-              <h2 className="eyebrow mb-4">Características técnicas</h2>
+              <h2 className="eyebrow mb-4">Características</h2>
               <ul className="space-y-2.5">
                 {product.features.map((feature) => (
                   <li
@@ -202,45 +179,59 @@ export default async function ProductPage({ params }: { params: Params }) {
               </ul>
             </div>
 
-            {/* Servicio */}
-            <div className="mt-8 grid gap-4 rounded-2xl border border-white/8 bg-graphite/50 p-5 sm:grid-cols-3">
-              {[
-                {
-                  icon: Truck,
-                  title: "Envío",
-                  text: BUSINESS.deliveryEstimate,
-                },
-                {
-                  icon: RefreshCw,
-                  title: "Cambios",
-                  text: `${BUSINESS.returnWindowDays} días`,
-                },
-                {
-                  icon: ShieldCheck,
-                  title: "Garantía",
-                  text: "Contra defectos",
-                },
-              ].map((service) => (
-                <div key={service.title} className="flex gap-3">
-                  <service.icon
-                    className="mt-0.5 h-4 w-4 shrink-0 text-aura"
-                    aria-hidden
-                  />
-                  <div>
-                    <p className="text-xs font-medium text-white">
-                      {service.title}
-                    </p>
-                    <p className="mt-0.5 text-xs text-mist">{service.text}</p>
-                  </div>
+            {/* Cómo se entrega — sin envíos ni paqueterías */}
+            <div className="mt-8 space-y-4 rounded-2xl border border-white/8 bg-graphite/50 p-5">
+              <div className="flex gap-3">
+                <MapPin
+                  className="mt-0.5 h-4 w-4 shrink-0 text-aura"
+                  aria-hidden
+                />
+                <div>
+                  <p className="text-xs font-medium text-white">
+                    {DELIVERY.method}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-mist">
+                    {DELIVERY.description}
+                  </p>
                 </div>
-              ))}
+              </div>
+
+              <div className="flex gap-3">
+                <RefreshCw
+                  className="mt-0.5 h-4 w-4 shrink-0 text-aura"
+                  aria-hidden
+                />
+                <div>
+                  <p className="text-xs font-medium text-white">
+                    Cambio de talla
+                  </p>
+                  <p className="mt-1 text-xs text-mist">
+                    Dentro de {BUSINESS.changeWindowDays} días, una vez por
+                    pedido.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <MessageCircle
+                  className="mt-0.5 h-4 w-4 shrink-0 text-aura"
+                  aria-hidden
+                />
+                <div>
+                  <p className="text-xs font-medium text-white">
+                    ¿Dudas antes de pedir?
+                  </p>
+                  <p className="mt-1 text-xs text-mist">
+                    Escríbenos por WhatsApp: {BUSINESS.supportHours}.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Relacionados */}
         {related.length ? (
-          <section className="mt-24">
+          <section className="mt-20">
             <Reveal>
               <SectionHeading
                 eyebrow="También te puede interesar"

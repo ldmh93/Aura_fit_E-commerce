@@ -4,18 +4,36 @@
 
 1. Leer `project-context.md`, `architecture.md` y `design-system.md`.
 2. Buscar si el componente o helper ya existe. **No duplicar.**
-3. Si la tarea toca la base de datos, revisar `database-schema.md`.
+3. Si la tarea toca datos, revisar `database-schema.md`.
+4. Si la tarea toca precios, entregas o cupones, revisar `business-rules.md`.
+
+## Lo que este negocio no tiene
+
+No introducir en la interfaz, aunque parezca "lo normal en un ecommerce":
+
+- Costos de envío, paqueterías, guías o direcciones de entrega
+- Cálculos de "envío gratis a partir de…"
+- Pasarela de pago
+- Registro de clientes
+- Colecciones o campo de género (la taxonomía es solo la categoría)
 
 ## Código
 
 - TypeScript estricto. Prohibido `any`; usar `unknown` + narrowing.
-- Todo tipo de dominio vive en `src/types` y se importa desde ahí.
+- Los tipos de dominio viven en `src/types` y se importan desde ahí.
 - Server Components por defecto. `"use client"` solo en hojas interactivas
-  (carrito, filtros, galería, formularios).
-- Mutaciones vía **Server Actions**, no API Routes, salvo webhooks.
-- Ningún componente importa `@supabase/*`: todo pasa por `src/services`.
-- Nombres en inglés para código; textos de UI en español (es-MX).
+  (carrito, filtros, galería, formularios del panel).
+- Mutaciones vía **Server Actions**, no API Routes.
+- Ningún componente lee datos directamente: todo pasa por `src/services`.
+- Nombres en inglés para el código; textos de interfaz en español (es-MX).
 - Componentes en `PascalCase.tsx`, utilidades en `kebab-case.ts`.
+
+## Validación
+
+- Toda entrada de usuario se valida y sanea **en el servidor** antes de tocar
+  los datos. `sanitizeText`, `sanitizePhone` y `slugify` están en `src/utils`.
+- Nunca confiar en un total o un descuento calculado en el cliente: se
+  recalculan en la Server Action.
 
 ## Dependencias
 
@@ -34,32 +52,31 @@
 ## Imágenes y media
 
 - Siempre `next/image` con `sizes` y `alt` reales.
-- Formatos preferidos: AVIF/WebP. Nada de PNG pesados en producción.
-- Videos de producto: `muted`, `playsInline`, `preload="none"`, con póster.
+- Formatos preferidos: AVIF/WebP.
+- Videos: `muted`, `playsInline`, `preload="none"`, con póster.
 
 ## Accesibilidad
 
-- Contraste AA mínimo, foco visible, navegación por teclado en drawers y modales.
+- Contraste AA mínimo, foco visible, navegación por teclado en drawers.
 - `aria-label` en botones de solo icono.
 - Respetar `prefers-reduced-motion`.
-
-## Seguridad
-
-- Secretos solo en `.env.local` / variables de Vercel. Jamás en el repo.
-- `SUPABASE_SERVICE_ROLE_KEY` nunca se expone al cliente ni lleva prefijo
-  `NEXT_PUBLIC_`.
-- Validar y sanitizar toda entrada del usuario en Server Actions antes de tocar
-  la base de datos.
-- `/admin` protegido por middleware + RLS. Defensa en dos capas.
 
 ## Rendimiento
 
 - Objetivo: LCP < 2.0s, CLS < 0.1 en móvil.
-- `revalidatePath` tras cada mutación del admin.
-- No cargar Framer Motion en componentes de servidor.
+- Nada pesado en el bundle de la tienda: las gráficas del panel se cargan con
+  `next/dynamic` (ver `features/admin/components/charts.tsx`).
+- `revalidatePath("/", "layout")` tras cada mutación del panel.
+
+## Seguridad
+
+- Secretos solo en `.env.local` / variables de Vercel. Jamás en el repo.
+- `SUPABASE_SERVICE_ROLE_KEY` nunca lleva prefijo `NEXT_PUBLIC_`.
+- `/admin` quedará protegido por middleware + RLS cuando se conecte Supabase.
+  **Hoy el panel está abierto en local:** no publicar sin ese paso.
 
 ## Git
 
 - Ramas: `feat/…`, `fix/…`, `chore/…`.
 - Commits en imperativo y en español, cortos.
-- No commitear `.env.local`, `node_modules`, `.next`.
+- No commitear `.env.local`, `node_modules`, `.next`, `.data`.

@@ -1,8 +1,11 @@
-import type { Collection, Size } from "@/types";
+import type { Size } from "@/types";
 
 /**
  * Configuración de marca y negocio.
- * Los valores comerciales están explicados en .claude/business-rules.md
+ * El porqué de cada valor está en .claude/business-rules.md
+ *
+ * Los valores que el administrador puede editar desde /admin/ajustes
+ * viven en `src/services/settings.service.ts`. Esto de aquí es la base.
  */
 
 export const SITE = {
@@ -10,7 +13,7 @@ export const SITE = {
   tagline: "Performance Wear",
   slogan: "Eleva tu rendimiento. Supera tus límites.",
   description:
-    "AURA FIT — Ropa deportiva premium de alto rendimiento. Tecnología, diseño y evolución personal en cada prenda.",
+    "AURA FIT — Ropa deportiva de alto rendimiento. Selección corta y cuidada. Pide por WhatsApp y te la entregamos en un punto de encuentro.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://aurafit.com",
   locale: "es_MX",
   currency: "MXN",
@@ -18,80 +21,55 @@ export const SITE = {
 } as const;
 
 export const WHATSAPP = {
-  /** Formato internacional sin "+" ni espacios. */
-  number: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "5215500000000",
+  /** Formato internacional sin "+" ni espacios. México: 52 + 10 dígitos. */
+  number: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "524171279042",
+  /** Para mostrar en pantalla. */
+  display: "417 127 9042",
   greeting: "Hola AURA FIT 👋",
 } as const;
 
-export const BUSINESS = {
-  /** Envío estándar nacional en MXN. */
-  shippingCost: 149,
-  /** Compras por encima de este monto llevan envío gratis. */
-  freeShippingThreshold: 1499,
-  /** Una variante con esta cantidad o menos dispara alerta de stock bajo. */
-  lowStockThreshold: 5,
-  /** Descuento máximo permitido en cupones (%). */
-  maxCouponDiscount: 30,
-  returnWindowDays: 30,
-  deliveryEstimate: "3 a 5 días hábiles",
-  supportHours: "Lunes a sábado, 9:00 – 19:00 (CDMX)",
+/**
+ * No hay envíos a domicilio ni paqueterías.
+ * La entrega se acuerda por WhatsApp en un punto de encuentro.
+ */
+export const DELIVERY = {
+  method: "Punto de encuentro",
+  short: "Entrega en punto de encuentro",
+  headline: "Entregamos en punto de encuentro",
+  description:
+    "Las entregas se realizan únicamente en un punto de encuentro previamente acordado por WhatsApp. No manejamos envíos a domicilio ni paqueterías.",
+  steps: [
+    "Elige tus prendas y envía el pedido por WhatsApp.",
+    "Confirmamos disponibilidad, total y forma de pago.",
+    "Acordamos día, hora y punto de encuentro para la entrega.",
+  ],
 } as const;
 
-export const SIZES: Size[] = ["XS", "S", "M", "L", "XL", "XXL"];
+export const BUSINESS = {
+  /** Una variante con esta cantidad o menos dispara alerta de stock bajo. */
+  lowStockThreshold: 3,
+  /** Descuento máximo permitido en cupones (%). */
+  maxCouponDiscount: 30,
+  changeWindowDays: 7,
+  supportHours: "Lunes a sábado, 10:00 – 20:00",
+} as const;
 
-export const COLLECTIONS: Collection[] = [
-  {
-    slug: "aura-performance",
-    name: "AURA PERFORMANCE",
-    tagline: "Alto rendimiento",
-    description:
-      "Prendas técnicas diseñadas para entrenamiento de alta intensidad. Compresión, secado rápido y libertad total de movimiento.",
-    image:
-      "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    slug: "aura-street",
-    name: "AURA STREET",
-    tagline: "Fitness urbano",
-    description:
-      "La estética del entrenamiento llevada al día a día. Siluetas amplias, materiales premium y acabados metálicos.",
-    image:
-      "https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    slug: "aura-women",
-    name: "AURA WOMEN",
-    tagline: "Línea femenina",
-    description:
-      "Ingeniería textil pensada para el cuerpo femenino. Soporte, ajuste y una segunda piel que se mueve contigo.",
-    image:
-      "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    slug: "aura-essential",
-    name: "AURA ESSENTIAL",
-    tagline: "Básicos premium",
-    description:
-      "Lo esencial, ejecutado a nivel premium. Los cortes que usas todos los días, con la calidad de una marca de rendimiento.",
-    image:
-      "https://images.unsplash.com/photo-1483721310020-03333e577078?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    slug: "limited-edition",
-    name: "LIMITED EDITION",
-    tagline: "Tiraje corto",
-    description:
-      "Piezas numeradas, producción limitada y sin restock. Cuando se agotan, no vuelven.",
-    image:
-      "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=1200&q=80",
-  },
-];
+export const SIZES: Size[] = ["XS", "S", "M", "L", "XL"];
+
+/** Colores disponibles en el catálogo. */
+export const COLOR_PALETTE = [
+  { name: "Negro", hex: "#0A0A0A" },
+  { name: "Gris", hex: "#6B7280" },
+  { name: "Azul", hex: "#5EA8FF" },
+  { name: "Plata", hex: "#C7D7E8" },
+  { name: "Blanco", hex: "#F5F5F5" },
+] as const;
 
 export const NAV_LINKS = [
-  { href: "/shop", label: "Tienda" },
-  { href: "/colecciones/aura-performance", label: "Performance" },
-  { href: "/colecciones/aura-women", label: "Women" },
-  { href: "/colecciones/limited-edition", label: "Limited" },
+  { href: "/categoria/hombre", label: "Hombre" },
+  { href: "/categoria/mujer", label: "Mujer" },
+  { href: "/shop", label: "Todo" },
+  { href: "/como-comprar", label: "Cómo comprar" },
 ] as const;
 
 /** Guía de medidas por tipo de prenda (cm). */
@@ -105,7 +83,6 @@ export const SIZE_GUIDES = {
       ["M", "95 – 100", "80 – 86", "70"],
       ["L", "100 – 108", "86 – 93", "72"],
       ["XL", "108 – 115", "93 – 100", "74"],
-      ["XXL", "115 – 122", "100 – 108", "76"],
     ],
   },
   inferior: {
@@ -117,7 +94,6 @@ export const SIZE_GUIDES = {
       ["M", "75 – 80", "96 – 101", "99"],
       ["L", "80 – 87", "101 – 107", "101"],
       ["XL", "87 – 94", "107 – 113", "103"],
-      ["XXL", "94 – 101", "113 – 120", "105"],
     ],
   },
 } as const;
@@ -126,7 +102,6 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   pendiente: "Pendiente",
   confirmado: "Confirmado",
   pagado: "Pagado",
-  enviado: "Enviado",
-  finalizado: "Finalizado",
+  entregado: "Entregado",
   cancelado: "Cancelado",
 };

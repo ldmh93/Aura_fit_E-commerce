@@ -88,11 +88,14 @@ export function isValidPhone(value: string): boolean {
   return digits.length >= 10 && digits.length <= 15;
 }
 
-/** Clave única de variante en el carrito. */
+/**
+ * Clave única de variante en el carrito.
+ * Separador doble para que un color con guion no genere colisiones.
+ */
 export function variantKey(
   productId: string,
   size: string,
   color: string,
 ): string {
-  return `${productId}-${size}-${color}`;
+  return `${productId}__${size}__${color}`;
 }

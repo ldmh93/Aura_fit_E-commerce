@@ -3,9 +3,9 @@
 import { validateCoupon } from "@/services/coupons.service";
 import { createOrder } from "@/services/orders.service";
 import type { CartItem } from "@/types";
-import { sanitizePhone, sanitizeText, isValidPhone } from "@/utils";
+import { isValidPhone, sanitizePhone, sanitizeText } from "@/utils";
 
-/** Valida el cupón en el servidor. Nunca confiar en el cliente. */
+/** Valida el cupón en el servidor. Nunca se confía en el cliente. */
 export async function applyCouponAction(code: string) {
   return validateCoupon(sanitizeText(code, 40));
 }
@@ -14,9 +14,6 @@ export interface CheckoutInput {
   customerName: string;
   phone: string;
   items: CartItem[];
-  subtotal: number;
-  discount: number;
-  total: number;
   couponCode: string | null;
 }
 
@@ -28,8 +25,7 @@ export interface CheckoutResult {
 
 /**
  * Registra el pedido antes de abrir WhatsApp.
- * Si no hay backend configurado devuelve ok con orderNumber null:
- * el checkout por WhatsApp funciona igual.
+ * Los totales se recalculan aquí: los del cliente son solo referencia.
  */
 export async function checkoutAction(
   input: CheckoutInput,
@@ -44,14 +40,13 @@ export async function checkoutAction(
     return {
       ok: false,
       orderNumber: null,
-      error: "Escribe un teléfono válido a 10 dígitos.",
+      error: "Escribe un WhatsApp válido a 10 dígitos.",
     };
   }
   if (!input.items.length) {
-    return { ok: false, orderNumber: null, error: "Tu carrito está vacío." };
+    return { ok: false, orderNumber: null, error: "Tu pedido está vacío." };
   }
 
-  // El total se recalcula en el servidor: el del cliente es solo referencia.
   const subtotal = input.items.reduce(
     (sum, item) => sum + item.unit_price * item.quantity,
     0,

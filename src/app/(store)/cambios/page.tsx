@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { InfoBlock, InfoPage } from "@/components/shared/InfoPage";
-import { BUSINESS } from "@/lib/config";
+import { BUSINESS, WHATSAPP } from "@/lib/config";
 
 export const metadata: Metadata = {
-  title: "Cambios y devoluciones",
+  title: "Cambios",
   description:
-    "Política de cambios y devoluciones de AURA FIT: 30 días, cambio de talla sin costo.",
+    "Política de cambios de AURA FIT: 7 días para cambiar la talla, sin costo, en el punto de encuentro.",
   alternates: { canonical: "/cambios" },
 };
 
@@ -13,36 +13,37 @@ export default function CambiosPage() {
   return (
     <InfoPage
       eyebrow="Ayuda"
-      title="Cambios y devoluciones"
-      intro={`Tienes ${BUSINESS.returnWindowDays} días naturales desde la entrega para solicitar un cambio o devolución.`}
+      title="Cambios"
+      intro={`Tienes ${BUSINESS.changeWindowDays} días desde la entrega para solicitar un cambio de talla.`}
     >
       <InfoBlock title="Condiciones">
         <p>
-          La prenda debe estar sin uso, con todas sus etiquetas y en su empaque
-          original. No aceptamos prendas lavadas, modificadas o con olor a
-          perfume o desodorante.
+          La prenda debe estar sin uso, con sus etiquetas y en las mismas
+          condiciones en que se entregó. No aceptamos prendas lavadas o
+          modificadas.
         </p>
       </InfoBlock>
 
-      <InfoBlock title="Cambio de talla">
+      <InfoBlock title="Cómo se hace el cambio">
         <p>
-          El primer cambio de talla por pedido es sin costo. Solo escríbenos por
-          WhatsApp con tu número de pedido y te enviamos la guía de retorno.
+          Escríbenos al {WHATSAPP.display} con tu número de pedido y la talla
+          que necesitas. Si hay existencia, acordamos un nuevo punto de
+          encuentro para intercambiar la prenda. Sin costo, una vez por pedido.
+        </p>
+      </InfoBlock>
+
+      <InfoBlock title="Devoluciones">
+        <p>
+          Si la prenda tiene un defecto de fabricación, la reponemos o
+          devolvemos el importe completo. Para devoluciones por decisión propia,
+          escríbenos y lo vemos caso por caso.
         </p>
       </InfoBlock>
 
       <InfoBlock title="Excepciones">
         <p>
-          No se aceptan cambios en productos de la colección LIMITED EDITION ni
-          en artículos comprados con un descuento mayor al 30%.
-        </p>
-      </InfoBlock>
-
-      <InfoBlock title="Reembolsos">
-        <p>
-          El reembolso se realiza por el mismo medio de pago en un plazo de 5 a
-          10 días hábiles a partir de que recibimos la prenda y verificamos su
-          estado.
+          No se aceptan cambios en artículos comprados con un descuento mayor al
+          30%.
         </p>
       </InfoBlock>
     </InfoPage>

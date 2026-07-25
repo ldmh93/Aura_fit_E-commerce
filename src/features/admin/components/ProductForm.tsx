@@ -5,17 +5,16 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Select, Textarea } from "@/components/ui/Field";
+import { ImageUploader } from "./ImageUploader";
 import {
   createProductAction,
   updateProductAction,
   type ActionState,
 } from "@/features/admin/actions";
-import { ImageUploader } from "./ImageUploader";
-import { COLLECTIONS, SIZES } from "@/lib/config";
+import { COLOR_PALETTE, SIZES } from "@/lib/config";
 import type { Category, Product } from "@/types";
 
 const initial: ActionState = { ok: false, message: "" };
-const COLOR_OPTIONS = ["Negro", "Gris", "Azul", "Plata", "Blanco"];
 
 export function ProductForm({
   categories,
@@ -31,7 +30,7 @@ export function ProductForm({
   );
 
   return (
-    <form action={formAction} className="space-y-8">
+    <form action={formAction} className="space-y-6">
       {product ? <input type="hidden" name="id" value={product.id} /> : null}
 
       <section className="surface p-5">
@@ -52,13 +51,16 @@ export function ProductForm({
           </div>
 
           <div>
-            <Label htmlFor="slug">Slug (URL)</Label>
+            <Label htmlFor="slug">Dirección web</Label>
             <Input
               id="slug"
               name="slug"
               defaultValue={product?.slug}
-              placeholder="playera-compression-aura-negra"
+              placeholder="playera-compression-aura"
             />
+            <p className="mt-1.5 text-xs text-mist">
+              Se genera del nombre si lo dejas vacío.
+            </p>
           </div>
 
           <div className="md:col-span-2">
@@ -73,14 +75,12 @@ export function ProductForm({
           </div>
 
           <div className="md:col-span-2">
-            <Label htmlFor="features">
-              Características técnicas (una por línea)
-            </Label>
+            <Label htmlFor="features">Características (una por línea)</Label>
             <Textarea
               id="features"
               name="features"
               defaultValue={product?.features.join("\n")}
-              placeholder={"Tela deportiva premium\nSecado rápido\nElasticidad"}
+              placeholder={"Secado rápido\nElasticidad en cuatro direcciones"}
             />
           </div>
 
@@ -100,7 +100,7 @@ export function ProductForm({
               id="sku"
               name="sku"
               defaultValue={product?.sku}
-              placeholder="AF-PC-001"
+              placeholder="AF-001"
               required
             />
           </div>
@@ -112,7 +112,7 @@ export function ProductForm({
           Precio y clasificación
         </h2>
 
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <Label htmlFor="price">Precio (MXN)</Label>
             <Input
@@ -137,6 +137,9 @@ export function ProductForm({
               defaultValue={product?.old_price ?? ""}
               placeholder="Opcional"
             />
+            <p className="mt-1.5 text-xs text-mist">
+              Si lo llenas, se muestra el descuento.
+            </p>
           </div>
 
           <div>
@@ -156,39 +159,32 @@ export function ProductForm({
           </div>
 
           <div>
-            <Label htmlFor="collection">Colección</Label>
-            <Select
-              id="collection"
-              name="collection"
-              defaultValue={product?.collection}
-            >
-              {COLLECTIONS.map((collection) => (
-                <option key={collection.slug} value={collection.slug}>
-                  {collection.name}
-                </option>
-              ))}
+            <Label htmlFor="fit">Tipo de prenda</Label>
+            <Select id="fit" name="fit" defaultValue={product?.fit ?? "superior"}>
+              <option value="superior">Parte superior</option>
+              <option value="inferior">Parte inferior</option>
             </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="gender">Género</Label>
-            <Select id="gender" name="gender" defaultValue={product?.gender}>
-              <option value="unisex">Unisex</option>
-              <option value="hombre">Hombre</option>
-              <option value="mujer">Mujer</option>
-            </Select>
+            <p className="mt-1.5 text-xs text-mist">
+              Define qué tabla de medidas se muestra.
+            </p>
           </div>
 
           <div>
             <Label htmlFor="status">Estado</Label>
-            <Select id="status" name="status" defaultValue={product?.status}>
+            <Select
+              id="status"
+              name="status"
+              defaultValue={product?.status ?? "activo"}
+            >
               <option value="activo">Activo</option>
               <option value="oculto">Oculto</option>
-              <option value="agotado">Agotado</option>
             </Select>
+            <p className="mt-1.5 text-xs text-mist">
+              &ldquo;Agotado&rdquo; se pone solo cuando el stock llega a cero.
+            </p>
           </div>
 
-          <div className="flex items-end pb-3">
+          <div className="flex items-end pb-6 sm:col-span-2">
             <label className="flex cursor-pointer items-center gap-3 text-sm text-white">
               <input
                 type="checkbox"
@@ -196,16 +192,20 @@ export function ProductForm({
                 defaultChecked={product?.featured}
                 className="h-4 w-4 accent-[#5EA8FF]"
               />
-              Producto destacado
+              Destacar en la portada
             </label>
           </div>
         </div>
       </section>
 
       <section className="surface p-5">
-        <h2 className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-white">
-          Variantes
+        <h2 className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-white">
+          Tallas y colores
         </h2>
+        <p className="mb-5 text-xs leading-relaxed text-mist">
+          Cada combinación de talla y color se convierte en una entrada de
+          inventario. Si quitas una, se borra su existencia.
+        </p>
 
         <div className="grid gap-6 md:grid-cols-2">
           <fieldset>
@@ -236,50 +236,56 @@ export function ProductForm({
               Colores
             </legend>
             <div className="flex flex-wrap gap-2">
-              {COLOR_OPTIONS.map((color) => (
+              {COLOR_PALETTE.map((color) => (
                 <label
-                  key={color}
-                  className="cursor-pointer rounded-xl border border-white/12 px-4 py-2.5 text-sm text-white transition-colors has-checked:border-aura has-checked:bg-aura/10 has-checked:text-aura"
+                  key={color.name}
+                  className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/12 px-3 py-2.5 text-sm text-white transition-colors has-checked:border-aura has-checked:bg-aura/10 has-checked:text-aura"
                 >
                   <input
                     type="checkbox"
                     name="colors"
-                    value={color}
+                    value={color.name}
                     defaultChecked={product?.colors.some(
-                      (c) => c.name === color,
+                      (c) => c.name === color.name,
                     )}
                     className="sr-only"
                   />
-                  {color}
+                  <span
+                    aria-hidden
+                    className="h-4 w-4 rounded-full border border-white/20"
+                    style={{ backgroundColor: color.hex }}
+                  />
+                  {color.name}
                 </label>
               ))}
             </div>
           </fieldset>
         </div>
 
-        <p className="mt-5 text-xs leading-relaxed text-mist">
-          Las combinaciones de talla y color se crean en el inventario con
-          cantidad cero. Ajusta las existencias desde{" "}
-          <Link href="/admin/inventario" className="text-aura hover:underline">
-            Inventario
-          </Link>
-          .
-        </p>
+        {isEdit ? (
+          <p className="mt-5 text-xs text-mist">
+            Ajusta las existencias desde{" "}
+            <Link
+              href="/admin/inventario"
+              className="text-aura hover:underline"
+            >
+              Inventario
+            </Link>
+            .
+          </p>
+        ) : null}
       </section>
 
       <section className="surface p-5">
         <h2 className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-white">
-          Multimedia
+          Fotos
         </h2>
 
         <div className="space-y-6">
-          <div>
-            <Label>Fotos del producto</Label>
-            <ImageUploader
-              folder={product?.slug ?? "nuevos"}
-              initial={product?.images ?? []}
-            />
-          </div>
+          <ImageUploader
+            folder={product?.slug ?? "nuevos"}
+            initial={product?.images ?? []}
+          />
 
           <div>
             <Label htmlFor="video">Video (URL)</Label>
@@ -294,7 +300,13 @@ export function ProductForm({
       </section>
 
       {state.message ? (
-        <p className={state.ok ? "text-xs text-success" : "text-xs text-danger"}>
+        <p
+          className={
+            state.ok
+              ? "rounded-xl border border-success/25 bg-success/5 px-4 py-3 text-xs text-success"
+              : "rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 text-xs text-danger"
+          }
+        >
           {state.message}
         </p>
       ) : null}
@@ -317,11 +329,7 @@ function SubmitButton({ isEdit }: { isEdit: boolean }) {
 
   return (
     <Button type="submit" variant="primary" size="lg" disabled={pending}>
-      {pending
-        ? "Guardando…"
-        : isEdit
-          ? "Guardar cambios"
-          : "Crear producto"}
+      {pending ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear producto"}
     </Button>
   );
 }

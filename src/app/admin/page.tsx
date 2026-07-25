@@ -4,22 +4,23 @@ import {
   Boxes,
   Clock,
   Package,
+  Plus,
+  Receipt,
   TrendingUp,
+  Wallet,
 } from "lucide-react";
 import {
   AdminPage,
   DashboardCard,
   EmptyState,
+  MiniBar,
   Panel,
   Td,
   Th,
 } from "@/features/admin/components/AdminUI";
-import {
-  RevenueChart,
-  TopProductsChart,
-} from "@/features/admin/components/DashboardCharts";
+import { RevenueChart } from "@/features/admin/components/charts";
 import { Badge } from "@/components/ui/Badge";
-import { getAdminProducts } from "@/services/products.service";
+import { LinkButton } from "@/components/ui/Button";
 import { getDashboardStats, getOrders } from "@/services/orders.service";
 import { getLowStockRows } from "@/services/inventory.service";
 import { ORDER_STATUS_LABELS } from "@/lib/config";
@@ -27,124 +28,168 @@ import { formatAmount, formatDate, formatPrice } from "@/utils";
 
 export const dynamic = "force-dynamic";
 
+function deltaPercent(current: number, previous: number): number | null {
+  if (previous <= 0) return null;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
 export default async function AdminDashboardPage() {
-  const [products, lowStock, orders] = await Promise.all([
-    getAdminProducts(),
+  const [stats, lowStock, orders] = await Promise.all([
+    getDashboardStats(),
     getLowStockRows(),
     getOrders(),
   ]);
 
-  const activeProducts = products.filter((p) => p.status === "activo").length;
-  const outOfStock = products.filter((p) => p.stock <= 0).length;
-
-  const stats = await getDashboardStats(
-    activeProducts,
-    outOfStock,
-    lowStock.filter((row) => row.quantity > 0).length,
-  );
-
-  const recentOrders = orders.slice(0, 6);
+  const recentOrders = orders.slice(0, 5);
+  const maxUnits = Math.max(1, ...stats.topProducts.map((p) => p.units));
 
   return (
     <AdminPage
       title="Dashboard"
       description="Resumen de la operación de AURA FIT."
+      action={
+        <div className="flex flex-wrap gap-2">
+          <LinkButton href="/admin/productos/nuevo" variant="primary" size="sm">
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            Nuevo producto
+          </LinkButton>
+          <LinkButton href="/admin/pedidos" variant="secondary" size="sm">
+            Ver pedidos
+          </LinkButton>
+        </div>
+      }
     >
+      {/* Avisos que requieren acción */}
+      {stats.ordersPending > 0 || lowStock.length > 0 ? (
+        <div className="mb-6 grid gap-3 md:grid-cols-2">
+          {stats.ordersPending > 0 ? (
+            <Link
+              href="/admin/pedidos?estado=pendiente"
+              className="flex items-center gap-3 rounded-xl border border-warning/25 bg-warning/5 px-4 py-3 transition-colors hover:border-warning/50"
+            >
+              <Clock className="h-4 w-4 shrink-0 text-warning" aria-hidden />
+              <p className="text-sm text-silver">
+                <span className="font-medium text-white">
+                  {stats.ordersPending}
+                </span>{" "}
+                {stats.ordersPending === 1
+                  ? "pedido pendiente por confirmar"
+                  : "pedidos pendientes por confirmar"}
+              </p>
+            </Link>
+          ) : null}
+
+          {lowStock.length > 0 ? (
+            <Link
+              href="/admin/inventario"
+              className="flex items-center gap-3 rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 transition-colors hover:border-danger/50"
+            >
+              <AlertTriangle
+                className="h-4 w-4 shrink-0 text-danger"
+                aria-hidden
+              />
+              <p className="text-sm text-silver">
+                <span className="font-medium text-white">
+                  {lowStock.length}
+                </span>{" "}
+                {lowStock.length === 1
+                  ? "variante necesita reposición"
+                  : "variantes necesitan reposición"}
+              </p>
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <DashboardCard
           label="Ventas del mes"
-          value={formatPrice(stats.monthRevenue)}
-          hint={`${stats.monthOrders} pedidos en el mes`}
+          value={formatPrice(stats.revenueMonth)}
+          delta={deltaPercent(stats.revenueMonth, stats.revenuePrevMonth)}
+          hint="vs. mes anterior"
           tone="aura"
           icon={<TrendingUp className="h-4 w-4" />}
         />
         <DashboardCard
+          label="Pedidos del mes"
+          value={stats.ordersMonth}
+          hint={`${stats.unitsSoldMonth} piezas vendidas`}
+          icon={<Receipt className="h-4 w-4" />}
+        />
+        <DashboardCard
+          label="Ticket promedio"
+          value={formatPrice(stats.averageTicket)}
+          hint="Pedidos pagados del mes"
+          icon={<Wallet className="h-4 w-4" />}
+        />
+        <DashboardCard
+          label="Valor del inventario"
+          value={formatPrice(stats.inventoryValue)}
+          hint={`${stats.inventoryUnits} piezas en existencia`}
+          icon={<Boxes className="h-4 w-4" />}
+        />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <DashboardCard
           label="Productos activos"
           value={stats.activeProducts}
-          hint={`${products.length} en catálogo`}
+          hint={`${stats.hiddenProducts} ocultos`}
           icon={<Package className="h-4 w-4" />}
         />
         <DashboardCard
-          label="Productos agotados"
+          label="Agotados"
           value={stats.outOfStockProducts}
           tone={stats.outOfStockProducts > 0 ? "danger" : "success"}
-          hint="Sin existencia en ninguna variante"
-          icon={<Boxes className="h-4 w-4" />}
+          hint="Sin ninguna variante"
+        />
+        <DashboardCard
+          label="Stock bajo"
+          value={stats.lowStockVariants}
+          tone={stats.lowStockVariants > 0 ? "warning" : "success"}
+          hint="Variantes por reponer"
         />
         <DashboardCard
           label="Pedidos pendientes"
-          value={stats.pendingOrders}
-          tone={stats.pendingOrders > 0 ? "warning" : "default"}
+          value={stats.ordersPending}
+          tone={stats.ordersPending > 0 ? "warning" : "default"}
           hint="Esperan confirmación"
-          icon={<Clock className="h-4 w-4" />}
         />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <Panel title="Ingresos · últimos 14 días" className="lg:col-span-2">
-          <RevenueChart data={stats.revenueByDay} />
-        </Panel>
-
-        <Panel title="Pedidos por estado">
-          <ul className="divide-y divide-white/6">
-            {stats.ordersByStatus.map((row) => (
-              <li
-                key={row.status}
-                className="flex items-center justify-between px-5 py-3.5 text-sm"
-              >
-                <span className="text-mist">
-                  {ORDER_STATUS_LABELS[row.status]}
-                </span>
-                <span className="tabular font-medium text-white">
-                  {row.count}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      </div>
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Panel title="Más vendidos">
-          <TopProductsChart data={stats.topProducts} />
-        </Panel>
-
         <Panel
-          title="Alertas de inventario"
+          title="Ingresos · últimos 14 días"
+          className="lg:col-span-2"
           action={
             <Link
-              href="/admin/inventario"
+              href="/admin/estadisticas"
               className="text-[11px] uppercase tracking-[0.14em] text-aura hover:underline"
             >
-              Ver todo
+              Más datos
             </Link>
           }
         >
-          {lowStock.length === 0 ? (
-            <EmptyState message="Todo el inventario está en niveles saludables." />
+          <RevenueChart data={stats.revenueByDay} />
+        </Panel>
+
+        <Panel title="Más vendidos">
+          {stats.topProducts.length === 0 ? (
+            <EmptyState message="Todavía no hay ventas registradas." />
           ) : (
-            <ul className="max-h-64 divide-y divide-white/6 overflow-y-auto">
-              {lowStock.slice(0, 8).map((row) => (
-                <li
-                  key={row.id}
-                  className="flex items-center justify-between gap-4 px-5 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm text-white">
-                      {row.product_name}
-                    </p>
-                    <p className="text-xs text-mist">
-                      {row.size} · {row.color}
-                    </p>
+            <ul className="space-y-4 p-5">
+              {stats.topProducts.map((product) => (
+                <li key={product.name}>
+                  <div className="mb-2 flex items-baseline justify-between gap-3">
+                    <span className="truncate text-sm text-white">
+                      {product.name}
+                    </span>
+                    <span className="tabular shrink-0 text-xs text-mist">
+                      {product.units} pzas
+                    </span>
                   </div>
-                  {row.quantity === 0 ? (
-                    <Badge tone="danger">
-                      <AlertTriangle className="h-3 w-3" />
-                      Agotado
-                    </Badge>
-                  ) : (
-                    <Badge tone="warning">{row.quantity} pzas</Badge>
-                  )}
+                  <MiniBar value={product.units} max={maxUnits} />
                 </li>
               ))}
             </ul>
@@ -167,48 +212,88 @@ export default async function AdminDashboardPage() {
         {recentOrders.length === 0 ? (
           <EmptyState message="Aún no hay pedidos registrados." />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-2xl">
-              <thead className="border-b border-white/8">
-                <tr>
-                  <Th>Pedido</Th>
-                  <Th>Cliente</Th>
-                  <Th>Fecha</Th>
-                  <Th>Total</Th>
-                  <Th>Estado</Th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/6">
-                {recentOrders.map((order) => (
-                  <tr key={order.id}>
-                    <Td className="tabular text-silver">
-                      {order.order_number}
-                    </Td>
-                    <Td className="text-white">{order.customer_name}</Td>
-                    <Td className="text-mist">{formatDate(order.created_at)}</Td>
-                    <Td className="tabular text-white">
+          <>
+            <ul className="divide-y divide-white/6 md:hidden">
+              {recentOrders.map((order) => (
+                <li
+                  key={order.id}
+                  className="flex items-center justify-between gap-3 p-4"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-white">
+                      {order.customer_name}
+                    </p>
+                    <p className="tabular text-xs text-mist">
+                      {order.order_number} · {formatDate(order.created_at)}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="tabular text-sm text-white">
                       {formatAmount(order.total)}
-                    </Td>
-                    <Td>
-                      <Badge
-                        tone={
-                          order.status === "pendiente"
-                            ? "warning"
-                            : order.status === "cancelado"
-                              ? "danger"
-                              : order.status === "finalizado"
-                                ? "success"
-                                : "aura"
-                        }
-                      >
-                        {ORDER_STATUS_LABELS[order.status]}
-                      </Badge>
-                    </Td>
+                    </p>
+                    <Badge
+                      tone={
+                        order.status === "pendiente"
+                          ? "warning"
+                          : order.status === "cancelado"
+                            ? "danger"
+                            : order.status === "entregado"
+                              ? "success"
+                              : "aura"
+                      }
+                    >
+                      {ORDER_STATUS_LABELS[order.status]}
+                    </Badge>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-2xl">
+                <thead className="border-b border-white/8">
+                  <tr>
+                    <Th>Pedido</Th>
+                    <Th>Cliente</Th>
+                    <Th>Fecha</Th>
+                    <Th>Total</Th>
+                    <Th>Estado</Th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-white/6">
+                  {recentOrders.map((order) => (
+                    <tr key={order.id}>
+                      <Td className="tabular text-silver">
+                        {order.order_number}
+                      </Td>
+                      <Td className="text-white">{order.customer_name}</Td>
+                      <Td className="text-mist">
+                        {formatDate(order.created_at)}
+                      </Td>
+                      <Td className="tabular text-white">
+                        {formatAmount(order.total)}
+                      </Td>
+                      <Td>
+                        <Badge
+                          tone={
+                            order.status === "pendiente"
+                              ? "warning"
+                              : order.status === "cancelado"
+                                ? "danger"
+                                : order.status === "entregado"
+                                  ? "success"
+                                  : "aura"
+                          }
+                        >
+                          {ORDER_STATUS_LABELS[order.status]}
+                        </Badge>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </Panel>
     </AdminPage>

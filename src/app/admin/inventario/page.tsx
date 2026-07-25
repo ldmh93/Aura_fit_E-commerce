@@ -1,64 +1,87 @@
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Minus, Plus } from "lucide-react";
 import {
   AdminPage,
   DashboardCard,
   EmptyState,
   Panel,
-  Td,
-  Th,
 } from "@/features/admin/components/AdminUI";
+import { SearchBox } from "@/features/admin/components/SearchBox";
 import { Badge } from "@/components/ui/Badge";
-import { updateInventoryAction } from "@/features/admin/actions";
-import { getInventory } from "@/services/inventory.service";
-import { BUSINESS } from "@/lib/config";
+import {
+  adjustInventoryAction,
+  updateInventoryAction,
+} from "@/features/admin/actions";
+import {
+  getInventory,
+  getInventorySummary,
+  type InventoryRow,
+} from "@/services/inventory.service";
+import { getSettings } from "@/services/settings.service";
+import { formatPrice } from "@/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminInventoryPage() {
-  const rows = await getInventory();
+export default async function AdminInventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
 
-  const outOfStock = rows.filter((row) => row.quantity === 0);
-  const lowStock = rows.filter(
-    (row) => row.quantity > 0 && row.quantity <= BUSINESS.lowStockThreshold,
-  );
-  const totalUnits = rows.reduce((sum, row) => sum + row.quantity, 0);
+  const [rows, summary, settings] = await Promise.all([
+    getInventory(q),
+    getInventorySummary(),
+    getSettings(),
+  ]);
 
-  // Agrupa por producto para que la tabla se lea como el almacén real.
-  const grouped = rows.reduce<Record<string, typeof rows>>((acc, row) => {
-    const key = row.product_name;
-    (acc[key] ??= []).push(row);
+  const threshold = settings.lowStockThreshold;
+  const needsAttention = rows.filter((row) => row.quantity <= threshold);
+
+  // Agrupado por producto: se lee como el almacén real.
+  const grouped = rows.reduce<Record<string, InventoryRow[]>>((acc, row) => {
+    (acc[row.product_name] ??= []).push(row);
     return acc;
   }, {});
 
   return (
     <AdminPage
       title="Inventario"
-      description={`Control por producto, talla y color. Alerta de stock bajo en ${BUSINESS.lowStockThreshold} unidades o menos.`}
+      description={`Existencias por producto, talla y color. Se marca stock bajo con ${threshold} piezas o menos.`}
     >
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <DashboardCard
-          label="Unidades totales"
-          value={totalUnits}
-          hint={`${rows.length} variantes`}
+          label="Piezas totales"
+          value={summary.units}
+          hint={`${summary.variants} variantes`}
+        />
+        <DashboardCard
+          label="Valor del inventario"
+          value={formatPrice(summary.value)}
+          hint="A precio de venta"
+          tone="aura"
         />
         <DashboardCard
           label="Stock bajo"
-          value={lowStock.length}
-          tone={lowStock.length ? "warning" : "success"}
-          hint="Variantes por reponer"
+          value={summary.lowStock}
+          tone={summary.lowStock ? "warning" : "success"}
+          hint="Por reponer"
         />
         <DashboardCard
           label="Sin existencia"
-          value={outOfStock.length}
-          tone={outOfStock.length ? "danger" : "success"}
+          value={summary.outOfStock}
+          tone={summary.outOfStock ? "danger" : "success"}
           hint="Variantes en cero"
         />
       </div>
 
-      {lowStock.length + outOfStock.length > 0 ? (
-        <Panel title="Requiere atención" className="mt-6">
+      {needsAttention.length > 0 && !q ? (
+        <Panel
+          title="Requiere reposición"
+          description="Ordenado de menor a mayor existencia"
+          className="mt-6"
+        >
           <ul className="divide-y divide-white/6">
-            {[...outOfStock, ...lowStock].slice(0, 10).map((row) => (
+            {needsAttention.slice(0, 8).map((row) => (
               <li
                 key={row.id}
                 className="flex items-center justify-between gap-4 px-5 py-3"
@@ -85,77 +108,113 @@ export default async function AdminInventoryPage() {
         </Panel>
       ) : null}
 
+      <div className="mt-6 mb-5">
+        <SearchBox placeholder="Buscar producto, SKU o color…" />
+      </div>
+
       {rows.length === 0 ? (
-        <Panel className="mt-6">
-          <EmptyState message="No hay variantes de inventario todavía." />
+        <Panel>
+          <EmptyState
+            message={
+              q
+                ? `Ninguna variante coincide con “${q}”.`
+                : "No hay variantes de inventario todavía."
+            }
+          />
         </Panel>
       ) : (
-        <div className="mt-6 space-y-4">
-          {Object.entries(grouped).map(([productName, variants]) => (
-            <Panel key={productName} title={productName}>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-lg">
-                  <thead className="border-b border-white/8">
-                    <tr>
-                      <Th>Talla</Th>
-                      <Th>Color</Th>
-                      <Th>Existencia</Th>
-                      <Th>Actualizar</Th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/6">
-                    {variants.map((variant) => (
-                      <tr key={variant.id}>
-                        <Td className="font-medium text-white">
+        <div className="space-y-4">
+          {Object.entries(grouped).map(([productName, variants]) => {
+            const total = variants.reduce((sum, v) => sum + v.quantity, 0);
+
+            return (
+              <Panel
+                key={productName}
+                title={productName}
+                description={`${total} piezas · ${variants.length} variantes`}
+              >
+                <ul className="divide-y divide-white/6">
+                  {variants.map((variant) => (
+                    <li
+                      key={variant.id}
+                      className="flex flex-wrap items-center gap-3 px-4 py-3 sm:gap-4"
+                    >
+                      <div className="flex min-w-32 items-center gap-2">
+                        <span className="rounded-lg border border-white/12 px-2.5 py-1 text-xs font-medium text-white">
                           {variant.size}
-                        </Td>
-                        <Td className="text-mist">{variant.color}</Td>
-                        <Td>
-                          <span
-                            className={
-                              variant.quantity === 0
-                                ? "tabular text-danger"
-                                : variant.quantity <= BUSINESS.lowStockThreshold
-                                  ? "tabular text-warning"
-                                  : "tabular text-success"
-                            }
+                        </span>
+                        <span className="text-sm text-mist">
+                          {variant.color}
+                        </span>
+                      </div>
+
+                      <span
+                        className={
+                          variant.quantity === 0
+                            ? "tabular w-16 text-sm text-danger"
+                            : variant.quantity <= threshold
+                              ? "tabular w-16 text-sm text-warning"
+                              : "tabular w-16 text-sm text-success"
+                        }
+                      >
+                        {variant.quantity} pzas
+                      </span>
+
+                      <div className="ml-auto flex items-center gap-2">
+                        {/* Ajuste rápido de una pieza */}
+                        <form action={adjustInventoryAction}>
+                          <input type="hidden" name="id" value={variant.id} />
+                          <input type="hidden" name="delta" value="-1" />
+                          <button
+                            type="submit"
+                            disabled={variant.quantity === 0}
+                            aria-label={`Quitar una pieza de ${productName} ${variant.size} ${variant.color}`}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/12 text-mist transition-colors hover:border-white/30 hover:text-white disabled:opacity-30"
                           >
-                            {variant.quantity}
-                          </span>
-                        </Td>
-                        <Td>
-                          <form
-                            action={updateInventoryAction}
-                            className="flex items-center gap-2"
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                        </form>
+
+                        <form action={adjustInventoryAction}>
+                          <input type="hidden" name="id" value={variant.id} />
+                          <input type="hidden" name="delta" value="1" />
+                          <button
+                            type="submit"
+                            aria-label={`Agregar una pieza a ${productName} ${variant.size} ${variant.color}`}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/12 text-mist transition-colors hover:border-aura hover:text-aura"
                           >
-                            <input
-                              type="hidden"
-                              name="id"
-                              value={variant.id}
-                            />
-                            <input
-                              type="number"
-                              name="quantity"
-                              min={0}
-                              defaultValue={variant.quantity}
-                              aria-label={`Cantidad de ${productName} talla ${variant.size} color ${variant.color}`}
-                              className="tabular w-20 rounded-lg border border-white/10 bg-steel px-3 py-1.5 text-sm text-white focus:border-aura/60 focus:outline-none"
-                            />
-                            <button
-                              type="submit"
-                              className="rounded-lg border border-white/12 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-mist transition-colors hover:border-aura hover:text-aura"
-                            >
-                              Guardar
-                            </button>
-                          </form>
-                        </Td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Panel>
-          ))}
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </form>
+
+                        {/* Cantidad exacta */}
+                        <form
+                          action={updateInventoryAction}
+                          className="flex items-center gap-2"
+                        >
+                          <input type="hidden" name="id" value={variant.id} />
+                          <input
+                            type="number"
+                            name="quantity"
+                            min={0}
+                            defaultValue={variant.quantity}
+                            aria-label={`Cantidad exacta de ${productName} talla ${variant.size} color ${variant.color}`}
+                            className="tabular w-20 rounded-lg border border-white/10 bg-steel px-3 py-1.5 text-sm text-white focus:border-aura/60 focus:outline-none"
+                          />
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-white/12 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-mist transition-colors hover:border-aura hover:text-aura"
+                          >
+                            Fijar
+                          </button>
+                        </form>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </Panel>
+            );
+          })}
         </div>
       )}
     </AdminPage>

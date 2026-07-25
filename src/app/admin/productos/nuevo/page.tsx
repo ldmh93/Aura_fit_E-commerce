@@ -5,12 +5,12 @@ import { getCategories } from "@/services/categories.service";
 export const dynamic = "force-dynamic";
 
 export default async function NewProductPage() {
-  const categories = await getCategories();
+  const categories = await getCategories(true);
 
   return (
     <AdminPage
       title="Nuevo producto"
-      description="Las variantes de inventario se crean en cero y se ajustan después."
+      description="Las combinaciones de talla y color se crean en cero. Ajusta las existencias en Inventario cuando termines."
     >
       <div className="max-w-4xl">
         <ProductForm categories={categories} />

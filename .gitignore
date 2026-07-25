@@ -17,3 +17,6 @@ yarn-error.log*
 .vercel
 next-env.d.ts
 *.tsbuildinfo
+
+# Ajustes de la tienda guardados en local (pasan a Supabase más adelante)
+.data

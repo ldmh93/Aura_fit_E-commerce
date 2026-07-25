@@ -4,14 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Minus, Plus, ShoppingBag, Tag, Trash2, X } from "lucide-react";
+import { MapPin, Minus, Plus, ShoppingBag, Tag, Trash2, X } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
 import { cartTotals, useCartStore } from "@/features/cart/store";
 import { applyCouponAction, checkoutAction } from "@/features/cart/actions";
 import { buildOrderMessage, whatsappUrl } from "@/features/cart/whatsapp";
 import { trackInitiateCheckout } from "@/lib/analytics";
-import { BUSINESS } from "@/lib/config";
+import { DELIVERY } from "@/lib/config";
 import { formatPrice } from "@/utils";
 
 export function CartDrawer() {
@@ -35,11 +35,6 @@ export function CartDrawer() {
   const [pending, startTransition] = useTransition();
 
   const { subtotal, discount, total, count } = cartTotals(items, coupon);
-  const shipping =
-    total >= BUSINESS.freeShippingThreshold || total === 0
-      ? 0
-      : BUSINESS.shippingCost;
-  const missingForFreeShipping = BUSINESS.freeShippingThreshold - total;
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -75,9 +70,6 @@ export function CartDrawer() {
         customerName: name,
         phone,
         items,
-        subtotal,
-        discount,
-        total,
         couponCode: coupon?.code ?? null,
       });
 
@@ -131,7 +123,7 @@ export function CartDrawer() {
               <div className="flex items-center gap-3">
                 <ShoppingBag className="h-4 w-4 text-aura" />
                 <h2 className="text-xs font-medium uppercase tracking-[0.24em] text-white">
-                  Tu carrito
+                  Tu pedido
                 </h2>
                 {count > 0 ? (
                   <span className="tabular text-xs text-mist">({count})</span>
@@ -151,8 +143,7 @@ export function CartDrawer() {
               <div className="flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center">
                 <ShoppingBag className="h-10 w-10 text-mist/40" />
                 <p className="text-sm text-mist">
-                  Tu carrito está vacío. Explora la colección y encuentra tu
-                  próxima pieza.
+                  Tu pedido está vacío. Echa un ojo al catálogo y arma el tuyo.
                 </p>
                 <LinkButton
                   href="/shop"
@@ -160,25 +151,25 @@ export function CartDrawer() {
                   size="sm"
                   onClick={closeCart}
                 >
-                  Ver tienda
+                  Ver productos
                 </LinkButton>
               </div>
             ) : (
               <>
                 <div className="flex-1 overflow-y-auto px-6 py-5">
-                  {shipping > 0 ? (
-                    <p className="mb-5 rounded-xl border border-aura/20 bg-aura/5 px-4 py-3 text-xs leading-relaxed text-silver">
-                      Te faltan{" "}
-                      <span className="text-aura">
-                        {formatPrice(missingForFreeShipping)}
+                  {/* Cómo se entrega: visible antes de cualquier otra cosa */}
+                  <div className="mb-5 flex gap-3 rounded-xl border border-aura/20 bg-aura/5 px-4 py-3">
+                    <MapPin
+                      className="mt-0.5 h-4 w-4 shrink-0 text-aura"
+                      aria-hidden
+                    />
+                    <p className="text-xs leading-relaxed text-silver">
+                      <span className="font-medium text-white">
+                        {DELIVERY.headline}.
                       </span>{" "}
-                      para envío gratis.
+                      {DELIVERY.description}
                     </p>
-                  ) : (
-                    <p className="mb-5 rounded-xl border border-success/20 bg-success/5 px-4 py-3 text-xs text-success">
-                      Tu pedido califica para envío gratis.
-                    </p>
-                  )}
+                  </div>
 
                   <ul className="space-y-5">
                     {items.map((item) => (
@@ -321,28 +312,24 @@ export function CartDrawer() {
                     />
                   </div>
 
-                  {/* Totales */}
+                  {/* Totales — sin envío */}
                   <dl className="space-y-2 text-sm">
-                    <div className="flex justify-between text-mist">
-                      <dt>Subtotal</dt>
-                      <dd className="tabular">{formatPrice(subtotal)}</dd>
-                    </div>
                     {discount > 0 ? (
-                      <div className="flex justify-between text-success">
-                        <dt>Descuento</dt>
-                        <dd className="tabular">−{formatPrice(discount)}</dd>
-                      </div>
+                      <>
+                        <div className="flex justify-between text-mist">
+                          <dt>Subtotal</dt>
+                          <dd className="tabular">{formatPrice(subtotal)}</dd>
+                        </div>
+                        <div className="flex justify-between text-success">
+                          <dt>Descuento</dt>
+                          <dd className="tabular">−{formatPrice(discount)}</dd>
+                        </div>
+                        <div className="hairline my-3" />
+                      </>
                     ) : null}
-                    <div className="flex justify-between text-mist">
-                      <dt>Envío</dt>
-                      <dd className="tabular">
-                        {shipping === 0 ? "Gratis" : formatPrice(shipping)}
-                      </dd>
-                    </div>
-                    <div className="hairline my-3" />
                     <div className="flex justify-between text-base font-semibold text-white">
                       <dt>Total</dt>
-                      <dd className="tabular">{formatPrice(total + shipping)}</dd>
+                      <dd className="tabular">{formatPrice(total)}</dd>
                     </div>
                   </dl>
 
@@ -357,12 +344,12 @@ export function CartDrawer() {
                     onClick={handleCheckout}
                     disabled={pending}
                   >
-                    {pending ? "Procesando…" : "Comprar por WhatsApp"}
+                    {pending ? "Procesando…" : "Pedir por WhatsApp"}
                   </Button>
 
                   <p className="mt-3 text-center text-[11px] leading-relaxed text-mist">
-                    Confirmamos disponibilidad y forma de pago por WhatsApp.
-                    Entrega en {BUSINESS.deliveryEstimate}.
+                    Confirmamos disponibilidad, forma de pago y punto de
+                    encuentro por WhatsApp.
                   </p>
                 </footer>
               </>

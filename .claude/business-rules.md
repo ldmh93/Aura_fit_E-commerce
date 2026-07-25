@@ -1,15 +1,53 @@
 # Reglas de negocio — AURA FIT
 
-> Estos valores son configurables. Los que impactan el código viven en
-> `src/lib/config.ts`; este archivo explica el **porqué**.
-> Ajustar aquí y en `config.ts` cuando el negocio cambie.
+> AURA FIT es un **proveedor pequeño** de ropa deportiva. Catálogo corto,
+> operación simple, trato directo con el cliente.
+>
+> Los valores que impactan el código viven en `src/lib/config.ts` y en los
+> ajustes editables desde `/admin/ajustes`. Este archivo explica el **porqué**.
+
+## Modelo de negocio
+
+- Catálogo pequeño y curado. Sin cientos de referencias.
+- El cliente **no crea cuenta**.
+- El pedido se envía por **WhatsApp**.
+- **No hay envíos a domicilio ni paqueterías.**
+- La entrega es en un **punto de encuentro** acordado con el cliente.
+
+## Contacto
+
+- Canal único: **WhatsApp 417 127 9042** (`524171279042` en formato
+  internacional).
+- Horario: lunes a sábado, 10:00 – 20:00.
+- Tiempo de respuesta objetivo: menos de 2 horas en horario hábil.
+- Tono: cercano, seguro, sin emojis excesivos. Nunca presionar la venta.
+
+## Entrega
+
+- Método único: **punto de encuentro**.
+- El punto, el día y la hora se acuerdan por WhatsApp después de confirmar
+  el pedido.
+- **Sin costo de entrega.** El precio mostrado es el precio final.
+- El punto acordado se guarda en el pedido (`orders.meeting_point`) para
+  tenerlo a la mano.
+
+**En la tienda nunca debe aparecer:** costo de envío, dirección de entrega,
+paquetería, número de guía, cálculo de envío gratis ni tiempo de tránsito.
+
+## Categorías
+
+Una sola taxonomía: **Hombre** y **Mujer**. Nada de colecciones, líneas ni
+campo de género aparte — sería la misma información dos veces.
+
+Se pueden agregar más categorías desde `/admin/categorias` si el catálogo
+crece. Una categoría con productos asignados no se puede eliminar.
 
 ## Moneda y precios
 
 - Moneda única: **MXN**. Formato `$1,398 MXN` (`Intl.NumberFormat('es-MX')`).
 - Los precios mostrados **incluyen IVA**.
-- `old_price` solo se muestra si es mayor que `price`; genera el badge de
-  descuento con el porcentaje calculado, nunca escrito a mano.
+- `old_price` solo se muestra si es mayor que `price`; el porcentaje de
+  descuento se calcula, nunca se escribe a mano.
 
 ## Márgenes (referencia interna, no se muestra en la tienda)
 
@@ -19,78 +57,59 @@
 
 ## Inventario
 
-- El stock se controla por variante (producto + talla + color).
-- **Alerta de stock bajo:** ≤ 5 unidades en una variante.
-- **Sin existencia:** 0 unidades → la variante se muestra deshabilitada.
-- Si todas las variantes están en 0, el producto pasa a estado `agotado` y deja
-  de poder agregarse al carrito (sigue visible para SEO y demanda).
+- Control por variante: producto + talla + color.
+- **Alerta de stock bajo:** 3 piezas o menos (editable en `/admin/ajustes`).
+- **Sin existencia:** 0 piezas → la variante aparece deshabilitada.
+- Si todas las variantes están en cero, el producto pasa a `agotado`
+  automáticamente y no se puede pedir. Sigue visible para SEO y demanda.
 - El stock **no** se descuenta al agregar al carrito. Se descuenta cuando el
   administrador marca el pedido como `confirmado`.
+- `products.stock` es un valor derivado del inventario: nunca se escribe a
+  mano desde el formulario.
 
 ## Pedidos
 
-Flujo de estados:
-
 ```
-pendiente → confirmado → pagado → enviado → finalizado
-                     ↘ cancelado
+pendiente → confirmado → pagado → entregado
+                    ↘ cancelado
 ```
 
 - `pendiente`: el cliente envió el pedido por WhatsApp.
 - `confirmado`: se verificó disponibilidad y se apartó el stock.
-- `pagado`: se recibió transferencia o depósito.
-- `enviado`: se entregó a paquetería, con número de guía en `notes`.
-- `finalizado`: el cliente recibió el pedido.
+- `pagado`: se recibió el pago (transferencia previa o efectivo).
+- `entregado`: se entregó en el punto de encuentro.
 - `cancelado`: libera el stock apartado.
 
 Los pedidos pendientes sin respuesta por más de **48 horas** se cancelan y el
 stock se libera.
 
-## Envíos
+Solo `pagado` y `entregado` cuentan como venta en las estadísticas.
 
-- Envío estándar nacional: **$149 MXN**.
-- **Envío gratis** en compras superiores a **$1,499 MXN**.
-- Tiempo de entrega estimado: 3–5 días hábiles.
-- Zonas extendidas pueden tener costo adicional; se acuerda por WhatsApp.
+## Pago
 
-## Cambios y devoluciones
+- Efectivo en el punto de encuentro, o transferencia previa.
+- Se acuerda por WhatsApp antes de la entrega.
+- No hay pasarela de pago en el sitio.
 
-- **30 días** naturales desde la entrega.
+## Cambios
+
+- **7 días** desde la entrega.
 - La prenda debe estar sin uso, con etiquetas y en su empaque original.
-- Cambio de talla: sin costo, una vez por pedido.
-- No se aceptan cambios en productos de `LIMITED EDITION` ni en artículos
-  comprados con descuento mayor al 30%.
-- El reembolso se realiza por el mismo medio de pago, en 5–10 días hábiles.
+- Cambio de talla: sin costo, una vez por pedido, sujeto a existencia.
+- No se aceptan cambios en artículos con descuento mayor al 30%.
+- Defecto de fabricación: se repone o se devuelve el importe completo.
 
 ## Cupones
 
 - Códigos siempre en MAYÚSCULAS (`AURA20`).
 - Un solo cupón por pedido; **no son acumulables**.
 - Descuento máximo permitido: **30%**.
-- Un cupón puede limitarse a un producto específico (`product_id`).
-- Los cupones expirados o inactivos se rechazan en el servidor, no solo en la UI.
-
-## Colecciones
-
-| Colección           | Posicionamiento                                   |
-| ------------------- | ------------------------------------------------- |
-| `AURA PERFORMANCE`  | Alto rendimiento, entrenamiento intenso           |
-| `AURA STREET`       | Fitness urbano, uso diario                        |
-| `AURA WOMEN`        | Línea femenina completa                           |
-| `AURA ESSENTIAL`    | Básicos premium, precio de entrada                |
-| `LIMITED EDITION`   | Tiraje corto, sin restock, precio premium         |
-
-## Atención al cliente
-
-- Canal único: **WhatsApp**.
-- Horario de atención: lunes a sábado, 9:00–19:00 (CDMX).
-- Tiempo de respuesta objetivo: menos de 2 horas en horario hábil.
-- Tono: cercano, seguro, sin emojis excesivos. Nunca presionar la venta.
+- Los cupones expirados o inactivos se rechazan **en el servidor**, no solo
+  en la interfaz.
 
 ## Marketing
 
-- Meta Pixel y GA4 activos en todo el sitio.
-- Eventos clave: `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase`.
+- Meta Pixel y GA4 se activan solo si hay ID configurado.
+- Eventos: `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase`.
 - `Purchase` se dispara cuando el administrador marca el pedido como `pagado`,
   no al enviar el WhatsApp.
-- Los lanzamientos se anuncian primero en `LIMITED EDITION` para crear urgencia.

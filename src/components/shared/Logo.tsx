@@ -54,7 +54,13 @@ export function LogoLink({ className }: { className?: string }) {
   );
 }
 
-/** Logotipo completo (emblema + wordmark) tal como lo entregó la marca. */
+/**
+ * Logotipo completo (emblema + wordmark) tal como lo entregó la marca.
+ * `size` es el ancho; el alto sale de la proporción real del archivo.
+ *
+ * Va sin optimizar porque es un SVG local: Next no procesa vectores y
+ * servirlo tal cual evita tener que habilitar `dangerouslyAllowSVG`.
+ */
 export function LogoMark({
   className,
   size = 220,
@@ -69,9 +75,9 @@ export function LogoMark({
       src={SITE.logo}
       alt={`${SITE.name} — ${SITE.tagline}`}
       width={size}
-      height={size}
+      height={Math.round((size * SITE.logoHeight) / SITE.logoWidth)}
       priority={priority}
-      sizes={`${size}px`}
+      unoptimized
       className={cn("h-auto w-full max-w-full select-none", className)}
     />
   );

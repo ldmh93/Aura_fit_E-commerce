@@ -33,13 +33,20 @@ export const metadata: Metadata = {
     siteName: SITE.name,
     title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
-    images: [{ url: SITE.logo, width: 1240, height: 1240, alt: SITE.name }],
+    images: [
+      {
+        url: SITE.logoImage,
+        width: SITE.logoWidth,
+        height: SITE.logoHeight,
+        alt: SITE.name,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
-    images: [SITE.logo],
+    images: [SITE.logoImage],
   },
   robots: { index: true, follow: true },
   // Los iconos salen de src/app/icon.png y apple-icon.png (7 KB en vez de

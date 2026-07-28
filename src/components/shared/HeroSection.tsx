@@ -27,8 +27,8 @@ export function HeroSection() {
       />
 
       <div className="container-aura relative z-10 py-14 text-center md:py-20">
-        <motion.div {...rise(0)} className="mx-auto w-44 md:w-56">
-          <LogoMark size={224} priority />
+        <motion.div {...rise(0)} className="mx-auto w-60 md:w-80">
+          <LogoMark size={320} priority />
         </motion.div>
 
         <motion.p {...rise(0.1)} className="eyebrow mt-1">

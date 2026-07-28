@@ -23,8 +23,8 @@ export async function Footer() {
       <div className="container-aura relative py-14 md:py-16">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <div className="w-32">
-              <LogoMark size={128} />
+            <div className="w-40">
+              <LogoMark size={160} />
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-mist">
               {SITE.description}

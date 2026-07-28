@@ -17,7 +17,12 @@ export const SITE = {
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://aurafit.com",
   locale: "es_MX",
   currency: "MXN",
-  logo: "/logo/aura-fit-logo.png",
+  /** Logotipo vectorial: nítido a cualquier tamaño y pesa 6 KB. */
+  logo: "/logo/aura-fit-logo.svg",
+  /** Versión en mapa de bits para Open Graph: las redes no leen SVG. */
+  logoImage: "/logo/aura-fit-logo.png",
+  logoWidth: 1622,
+  logoHeight: 1130,
 } as const;
 
 export const WHATSAPP = {

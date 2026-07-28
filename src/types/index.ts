@@ -17,7 +17,12 @@ export type OrderStatus =
   | "entregado"
   | "cancelado";
 
-export type Size = "XS" | "S" | "M" | "L" | "XL";
+/**
+ * Tallas del catálogo.
+ * `Unitalla` es para prendas y accesorios que no se tallan; cuando un
+ * producto la usa, es la única talla que debe llevar.
+ */
+export type Size = "XS" | "S" | "M" | "L" | "XL" | "Unitalla";
 
 export interface ProductColor {
   name: string;

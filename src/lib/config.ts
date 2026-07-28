@@ -1,4 +1,4 @@
-import type { Size } from "@/types";
+import type { ProductColor, Size } from "@/types";
 
 /**
  * Configuración de marca y negocio.
@@ -54,16 +54,99 @@ export const BUSINESS = {
   supportHours: "Lunes a sábado, 10:00 – 20:00",
 } as const;
 
-export const SIZES: Size[] = ["XS", "S", "M", "L", "XL"];
+/** Tallas que se pueden asignar a un producto. */
+export const SIZES: Size[] = ["XS", "S", "M", "L", "XL", "Unitalla"];
 
-/** Colores disponibles en el catálogo. */
-export const COLOR_PALETTE = [
-  { name: "Negro", hex: "#0A0A0A" },
-  { name: "Gris", hex: "#6B7280" },
-  { name: "Azul", hex: "#5EA8FF" },
-  { name: "Plata", hex: "#C7D7E8" },
-  { name: "Blanco", hex: "#F5F5F5" },
-] as const;
+/** Talla para prendas y accesorios que no se tallan. */
+export const ONE_SIZE: Size = "Unitalla";
+
+/** Orden fijo para mostrar tallas, sin importar cómo se guardaron. */
+const SIZE_ORDER: Record<Size, number> = {
+  XS: 1,
+  S: 2,
+  M: 3,
+  L: 4,
+  XL: 5,
+  Unitalla: 6,
+};
+
+export function sortSizes(sizes: Size[]): Size[] {
+  return [...sizes].sort((a, b) => SIZE_ORDER[a] - SIZE_ORDER[b]);
+}
+
+/**
+ * Paleta de colores de producto.
+ *
+ * Ojo con la diferencia: la **interfaz** es negra, plata y azul y eso no
+ * cambia (ver .claude/design-system.md). Esto son los colores de la **ropa**,
+ * que sí pueden ser cálidos o vivos.
+ *
+ * Para agregar un color nuevo, basta con añadirlo aquí: aparece solo en el
+ * formulario del panel y en los filtros de la tienda.
+ */
+export const COLOR_GROUPS: { label: string; colors: ProductColor[] }[] = [
+  {
+    label: "Neutros",
+    colors: [
+      { name: "Negro", hex: "#0A0A0A" },
+      { name: "Grafito", hex: "#2E2E33" },
+      { name: "Gris", hex: "#6B7280" },
+      { name: "Gris jaspeado", hex: "#A3A8B0" },
+      { name: "Plata", hex: "#C7D7E8" },
+      { name: "Hueso", hex: "#EDE7DC" },
+      { name: "Blanco", hex: "#F5F5F5" },
+    ],
+  },
+  {
+    label: "Azules",
+    colors: [
+      { name: "Azul", hex: "#5EA8FF" },
+      { name: "Azul marino", hex: "#1E2A47" },
+      { name: "Turquesa", hex: "#2FBFAE" },
+    ],
+  },
+  {
+    label: "Verdes",
+    colors: [
+      { name: "Verde militar", hex: "#4A5340" },
+      { name: "Verde menta", hex: "#9FD8B8" },
+      { name: "Verde neón", hex: "#B8E62E" },
+    ],
+  },
+  {
+    label: "Tierra",
+    colors: [
+      { name: "Beige", hex: "#D6C7B0" },
+      { name: "Camel", hex: "#B08658" },
+      { name: "Café", hex: "#5A4433" },
+    ],
+  },
+  {
+    label: "Cálidos",
+    colors: [
+      { name: "Vino", hex: "#6E2438" },
+      { name: "Rojo", hex: "#C7343B" },
+      { name: "Coral", hex: "#F0705C" },
+      { name: "Naranja", hex: "#E8802E" },
+      { name: "Amarillo", hex: "#E8C46A" },
+    ],
+  },
+  {
+    label: "Otros",
+    colors: [
+      { name: "Rosa", hex: "#E8A0BF" },
+      { name: "Lila", hex: "#A98BD4" },
+      { name: "Morado", hex: "#5B3E8E" },
+    ],
+  },
+];
+
+/** Paleta plana — para buscar el hex de un color por su nombre. */
+export const COLOR_PALETTE = COLOR_GROUPS.flatMap((group) => group.colors);
+
+export function colorHex(name: string): string {
+  return COLOR_PALETTE.find((color) => color.name === name)?.hex ?? "#888888";
+}
 
 export const NAV_LINKS = [
   { href: "/categoria/hombre", label: "Hombre" },
@@ -72,7 +155,11 @@ export const NAV_LINKS = [
   { href: "/como-comprar", label: "Cómo comprar" },
 ] as const;
 
-/** Guía de medidas por tipo de prenda (cm). */
+/**
+ * Guía de medidas por tipo de prenda (cm).
+ * Unitalla no aparece: no se talla. La guía se oculta cuando el producto
+ * solo tiene esa talla.
+ */
 export const SIZE_GUIDES = {
   superior: {
     label: "Parte superior",

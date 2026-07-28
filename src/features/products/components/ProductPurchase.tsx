@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { SizeGuide } from "./SizeGuide";
 import { useCartStore } from "@/features/cart/store";
 import { trackAddToCart, trackViewContent } from "@/lib/analytics";
-import { BUSINESS } from "@/lib/config";
+import { BUSINESS, ONE_SIZE, sortSizes } from "@/lib/config";
 import type { ProductWithInventory, Size } from "@/types";
 import { cn, formatPrice } from "@/utils";
 
@@ -57,10 +57,16 @@ export function ProductPurchase({
   const colorHasStock = [...stockBySize.values()].some((q) => q > 0);
   const soldOut = product.stock <= 0 || product.status === "agotado";
 
+  const sizes = useMemo(() => sortSizes(product.sizes), [product.sizes]);
+  /** Unitalla: no hay nada que elegir ni tabla de medidas que enseñar. */
+  const isOneSize = sizes.length === 1 && sizes[0] === ONE_SIZE;
+
+  // Al cambiar de color se reinicia la selección, salvo que solo haya una
+  // talla: en ese caso pedirla al cliente es un paso de más.
   useEffect(() => {
-    setSize(null);
+    setSize(sizes.length === 1 ? sizes[0]! : null);
     setQuantity(1);
-  }, [color]);
+  }, [color, sizes]);
 
   function handleAdd() {
     setError(null);
@@ -139,10 +145,10 @@ export function ProductPurchase({
       <div ref={sizeRef} className="scroll-mt-24">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="eyebrow">Talla</h2>
-          <SizeGuide type={guideType} />
+          {isOneSize ? null : <SizeGuide type={guideType} />}
         </div>
         <div className="flex flex-wrap gap-2">
-          {product.sizes.map((option) => {
+          {sizes.map((option) => {
             const stock = stockBySize.get(option) ?? 0;
             const disabled = stock <= 0;
 

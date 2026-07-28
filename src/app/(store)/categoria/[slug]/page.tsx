@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ProductFilter } from "@/features/products/components/ProductFilter";
 import { ProductGrid } from "@/features/products/components/ProductGrid";
-import { getProducts } from "@/services/products.service";
+import { getCatalogFacets, getProducts } from "@/services/products.service";
 import { getCategories, getCategoryBySlug } from "@/services/categories.service";
 import { SITE } from "@/lib/config";
 import type { ProductFilters, Size } from "@/types";
@@ -65,9 +65,10 @@ export default async function CategoryPage({
     sort: first(query.sort) as ProductFilters["sort"],
   };
 
-  const [products, categories] = await Promise.all([
+  const [products, categories, facets] = await Promise.all([
     getProducts(filters),
     getCategories(),
+    getCatalogFacets(category.slug),
   ]);
 
   return (
@@ -99,6 +100,8 @@ export default async function CategoryPage({
         <Suspense fallback={null}>
           <ProductFilter
             categories={categories}
+            colors={facets.colors}
+            sizes={facets.sizes}
             total={products.length}
             showCategories={false}
           />

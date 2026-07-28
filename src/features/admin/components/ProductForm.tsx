@@ -11,7 +11,7 @@ import {
   updateProductAction,
   type ActionState,
 } from "@/features/admin/actions";
-import { COLOR_PALETTE, SIZES } from "@/lib/config";
+import { COLOR_GROUPS, ONE_SIZE, SIZES } from "@/lib/config";
 import type { Category, Product } from "@/types";
 
 const initial: ActionState = { ok: false, message: "" };
@@ -207,60 +207,72 @@ export function ProductForm({
           inventario. Si quitas una, se borra su existencia.
         </p>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <fieldset>
-            <legend className="mb-3 text-[11px] font-medium uppercase tracking-[0.16em] text-mist">
-              Tallas
-            </legend>
-            <div className="flex flex-wrap gap-2">
-              {SIZES.map((size) => (
-                <label
-                  key={size}
-                  className="cursor-pointer rounded-xl border border-white/12 px-4 py-2.5 text-sm text-white transition-colors has-checked:border-aura has-checked:bg-aura/10 has-checked:text-aura"
-                >
-                  <input
-                    type="checkbox"
-                    name="sizes"
-                    value={size}
-                    defaultChecked={product?.sizes.includes(size)}
-                    className="sr-only"
-                  />
-                  {size}
-                </label>
-              ))}
-            </div>
-          </fieldset>
+        <fieldset>
+          <legend className="mb-3 text-[11px] font-medium uppercase tracking-[0.16em] text-mist">
+            Tallas
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            {SIZES.map((size) => (
+              <label
+                key={size}
+                className="cursor-pointer rounded-xl border border-white/12 px-4 py-2.5 text-sm text-white transition-colors has-checked:border-aura has-checked:bg-aura/10 has-checked:text-aura"
+              >
+                <input
+                  type="checkbox"
+                  name="sizes"
+                  value={size}
+                  defaultChecked={product?.sizes.includes(size)}
+                  className="sr-only"
+                />
+                {size}
+              </label>
+            ))}
+          </div>
+          <p className="mt-2.5 text-xs text-mist">
+            &ldquo;{ONE_SIZE}&rdquo; va sola: si el producto no se talla, no
+            marques ninguna otra.
+          </p>
+        </fieldset>
 
-          <fieldset>
-            <legend className="mb-3 text-[11px] font-medium uppercase tracking-[0.16em] text-mist">
-              Colores
-            </legend>
-            <div className="flex flex-wrap gap-2">
-              {COLOR_PALETTE.map((color) => (
-                <label
-                  key={color.name}
-                  className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/12 px-3 py-2.5 text-sm text-white transition-colors has-checked:border-aura has-checked:bg-aura/10 has-checked:text-aura"
-                >
-                  <input
-                    type="checkbox"
-                    name="colors"
-                    value={color.name}
-                    defaultChecked={product?.colors.some(
-                      (c) => c.name === color.name,
-                    )}
-                    className="sr-only"
-                  />
-                  <span
-                    aria-hidden
-                    className="h-4 w-4 rounded-full border border-white/20"
-                    style={{ backgroundColor: color.hex }}
-                  />
-                  {color.name}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        </div>
+        <fieldset className="mt-7">
+          <legend className="mb-3 text-[11px] font-medium uppercase tracking-[0.16em] text-mist">
+            Colores
+          </legend>
+
+          <div className="space-y-4">
+            {COLOR_GROUPS.map((group) => (
+              <div key={group.label}>
+                <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-mist/60">
+                  {group.label}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {group.colors.map((color) => (
+                    <label
+                      key={color.name}
+                      className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/12 py-2 pl-2 pr-3 text-sm text-white transition-colors has-checked:border-aura has-checked:bg-aura/10 has-checked:text-aura"
+                    >
+                      <input
+                        type="checkbox"
+                        name="colors"
+                        value={color.name}
+                        defaultChecked={product?.colors.some(
+                          (c) => c.name === color.name,
+                        )}
+                        className="sr-only"
+                      />
+                      <span
+                        aria-hidden
+                        className="h-5 w-5 shrink-0 rounded-full border border-white/25"
+                        style={{ backgroundColor: color.hex }}
+                      />
+                      {color.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </fieldset>
 
         {isEdit ? (
           <p className="mt-5 text-xs text-mist">

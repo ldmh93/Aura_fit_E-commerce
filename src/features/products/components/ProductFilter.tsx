@@ -4,8 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { X } from "lucide-react";
 import { Select } from "@/components/ui/Field";
-import { COLOR_PALETTE, SIZES } from "@/lib/config";
-import type { Category } from "@/types";
+import type { Category, ProductColor, Size } from "@/types";
 import { cn } from "@/utils";
 
 /**
@@ -23,10 +22,16 @@ const SORTS = [
 
 export function ProductFilter({
   categories,
+  colors,
+  sizes,
   total,
   showCategories = true,
 }: {
   categories: Category[];
+  /** Colores que existen en el catálogo, no la paleta completa. */
+  colors: ProductColor[];
+  /** Tallas que existen en el catálogo. */
+  sizes: Size[];
   total: number;
   showCategories?: boolean;
 }) {
@@ -106,38 +111,48 @@ export function ProductFilter({
           </Group>
         ) : null}
 
-        <Group label="Talla">
-          {SIZES.map((size) => (
-            <Chip
-              key={size}
-              active={get("size") === size}
-              onClick={() => setParam("size", get("size") === size ? null : size)}
-            >
-              {size}
-            </Chip>
-          ))}
-        </Group>
+        {sizes.length > 1 ? (
+          <Group label="Talla">
+            {sizes.map((size) => (
+              <Chip
+                key={size}
+                active={get("size") === size}
+                onClick={() =>
+                  setParam("size", get("size") === size ? null : size)
+                }
+              >
+                {size}
+              </Chip>
+            ))}
+          </Group>
+        ) : null}
 
-        <Group label="Color">
-          {COLOR_PALETTE.map((color) => (
-            <button
-              key={color.name}
-              type="button"
-              aria-label={`Color ${color.name}`}
-              aria-pressed={get("color") === color.name}
-              onClick={() =>
-                setParam("color", get("color") === color.name ? null : color.name)
-              }
-              className={cn(
-                "h-7 w-7 rounded-full border-2 transition-all",
-                get("color") === color.name
-                  ? "scale-110 border-aura"
-                  : "border-white/15 hover:border-white/40",
-              )}
-              style={{ backgroundColor: color.hex }}
-            />
-          ))}
-        </Group>
+        {colors.length > 1 ? (
+          <Group label="Color">
+            {colors.map((color) => (
+              <button
+                key={color.name}
+                type="button"
+                aria-label={`Color ${color.name}`}
+                aria-pressed={get("color") === color.name}
+                title={color.name}
+                onClick={() =>
+                  setParam(
+                    "color",
+                    get("color") === color.name ? null : color.name,
+                  )
+                }
+                className={cn(
+                  "h-7 w-7 rounded-full border-2 transition-all",
+                  get("color") === color.name
+                    ? "scale-110 border-aura"
+                    : "border-white/15 hover:border-white/40",
+                )}
+                style={{ backgroundColor: color.hex }}
+              />
+            ))}
+          </Group>
+        ) : null}
 
         <Group label="Disponibilidad">
           <Chip

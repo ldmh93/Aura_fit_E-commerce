@@ -28,7 +28,7 @@ import {
   toggleCoupon,
 } from "@/services/coupons.service";
 import { saveSettings } from "@/services/settings.service";
-import { COLOR_PALETTE } from "@/lib/config";
+import { ONE_SIZE, colorHex, sortSizes } from "@/lib/config";
 import type { OrderStatus, ProductStatus, Size } from "@/types";
 import { sanitizePhone, sanitizeText, slugify } from "@/utils";
 
@@ -70,11 +70,8 @@ function parseProductForm(formData: FormData): ProductInput {
     video: sanitizeText(formData.get("video"), 500) || null,
     category_id: sanitizeText(formData.get("category_id"), 60),
     fit: formData.get("fit") === "inferior" ? "inferior" : "superior",
-    sizes: formData.getAll("sizes").map(String) as Size[],
-    colors: colorNames.map((color) => ({
-      name: color,
-      hex: COLOR_PALETTE.find((c) => c.name === color)?.hex ?? "#888888",
-    })),
+    sizes: sortSizes(formData.getAll("sizes").map(String) as Size[]),
+    colors: colorNames.map((color) => ({ name: color, hex: colorHex(color) })),
     featured: formData.get("featured") === "on",
     status: sanitizeText(formData.get("status"), 20) as ProductStatus,
   };
@@ -88,6 +85,8 @@ function validateProduct(input: ProductInput): string | null {
     return "El precio anterior debe ser mayor que el precio actual.";
   if (!input.category_id) return "Elige una categoría.";
   if (!input.sizes.length) return "Selecciona al menos una talla.";
+  if (input.sizes.includes(ONE_SIZE) && input.sizes.length > 1)
+    return `“${ONE_SIZE}” no se combina con otras tallas: o el producto se talla, o no.`;
   if (!input.colors.length) return "Selecciona al menos un color.";
   if (!input.images.length) return "Sube al menos una foto.";
   return null;

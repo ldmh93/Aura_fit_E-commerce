@@ -7,6 +7,7 @@ import type {
   ProductWithInventory,
   Size,
 } from "@/types";
+import { sortSizes } from "@/lib/config";
 import { slugify } from "@/utils";
 
 /**
@@ -128,6 +129,33 @@ export async function getAllProductSlugs(): Promise<
 > {
   const products = await getProducts();
   return products.map((p) => ({ slug: p.slug, created_at: p.created_at }));
+}
+
+/**
+ * Colores y tallas que existen de verdad en el catálogo.
+ * Los filtros solo muestran esto: ofrecer los 24 colores de la paleta
+ * cuando en la tienda hay cuatro es ruido.
+ */
+export async function getCatalogFacets(category?: string): Promise<{
+  colors: ProductColor[];
+  sizes: Size[];
+}> {
+  const products = await getProducts(category ? { category } : {});
+
+  const colors = new Map<string, ProductColor>();
+  const sizes = new Set<Size>();
+
+  for (const product of products) {
+    for (const color of product.colors) {
+      if (!colors.has(color.name)) colors.set(color.name, color);
+    }
+    for (const size of product.sizes) sizes.add(size);
+  }
+
+  return {
+    colors: [...colors.values()].sort((a, b) => a.name.localeCompare(b.name, "es")),
+    sizes: sortSizes([...sizes]),
+  };
 }
 
 /* ── Administración ──────────────────────────────────────────── */

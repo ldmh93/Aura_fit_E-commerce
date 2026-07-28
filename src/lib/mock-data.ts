@@ -19,10 +19,17 @@ import type {
 const U = (id: string, w = 1200) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80`;
 
+/** Los hex salen de COLOR_PALETTE en `lib/config.ts`. */
 const NEGRO: ProductColor = { name: "Negro", hex: "#0A0A0A" };
 const GRIS: ProductColor = { name: "Gris", hex: "#6B7280" };
 const AZUL: ProductColor = { name: "Azul", hex: "#5EA8FF" };
 const PLATA: ProductColor = { name: "Plata", hex: "#C7D7E8" };
+const MARINO: ProductColor = { name: "Azul marino", hex: "#1E2A47" };
+const MILITAR: ProductColor = { name: "Verde militar", hex: "#4A5340" };
+const VINO: ProductColor = { name: "Vino", hex: "#6E2438" };
+const BEIGE: ProductColor = { name: "Beige", hex: "#D6C7B0" };
+const CORAL: ProductColor = { name: "Coral", hex: "#F0705C" };
+const LILA: ProductColor = { name: "Lila", hex: "#A98BD4" };
 
 export const mockCategories: Category[] = [
   {
@@ -90,7 +97,7 @@ const seeds: Seed[] = [
     category_id: "cat-hombre",
     fit: "superior",
     sizes: ["S", "M", "L", "XL"],
-    colors: [NEGRO, GRIS, AZUL],
+    colors: [NEGRO, GRIS, AZUL, MARINO],
     featured: true,
   },
   {
@@ -142,7 +149,7 @@ const seeds: Seed[] = [
     category_id: "cat-hombre",
     fit: "superior",
     sizes: ["S", "M", "L", "XL"],
-    colors: [NEGRO, GRIS],
+    colors: [NEGRO, GRIS, MILITAR, VINO],
     featured: true,
   },
   {
@@ -220,7 +227,7 @@ const seeds: Seed[] = [
     category_id: "cat-mujer",
     fit: "superior",
     sizes: ["XS", "S", "M", "L"],
-    colors: [NEGRO, PLATA],
+    colors: [NEGRO, PLATA, CORAL, VINO],
     featured: true,
   },
   {
@@ -272,7 +279,32 @@ const seeds: Seed[] = [
     category_id: "cat-mujer",
     fit: "inferior",
     sizes: ["XS", "S", "M", "L"],
-    colors: [NEGRO, AZUL],
+    colors: [NEGRO, AZUL, LILA],
+  },
+  {
+    id: "p-009",
+    name: "Gorra Performance",
+    slug: "gorra-performance",
+    description:
+      "Gorra de entrenamiento con ajuste trasero y tela transpirable. Talla única.",
+    features: [
+      "Ajuste trasero regulable",
+      "Tela transpirable",
+      "Visera preformada",
+      "Logo bordado",
+    ],
+    material: "100% Poliéster reciclado",
+    price: 349,
+    sku: "AF-009",
+    images: [
+      U("1588850561407-ed78c282e89b"),
+      U("1521369909029-2afed882baee"),
+      U("1517836357463-d25dfeac3438"),
+    ],
+    category_id: "cat-hombre",
+    fit: "superior",
+    sizes: ["Unitalla"],
+    colors: [NEGRO, MARINO, MILITAR],
   },
 ];
 

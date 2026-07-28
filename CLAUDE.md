@@ -121,11 +121,13 @@ Los datos salen de Supabase (proyecto `npbzjnbsxsvwqvjjwjwh`): 6 tablas,
 trigger de stock, RLS activo y bucket `productos` para las fotos.
 Catálogo cargado: 2 categorías, 9 productos, 115 variantes, 2 cupones.
 
+**En línea:** <https://aura-fit-store.vercel.app> (proyecto Vercel
+`luigis/aura-fit-store`, conectado al repositorio de GitHub).
+
 **`/admin` ya exige sesión.** Falta crear el usuario administrador en
 Supabase Auth; hasta entonces el panel redirige a `/admin/login`.
 
-Publicado en GitHub: `ldmh93/Aura_fit_E-commerce` (repositorio **público**).
-No hay nada desplegado en Vercel.
+Repositorio: `ldmh93/Aura_fit_E-commerce` (**público**).
 
 ---
 
@@ -152,26 +154,28 @@ No hay nada desplegado en Vercel.
 Lista viva y priorizada en **`TASKS.md`**. Resumen:
 
 1. Crear el usuario administrador en Supabase Auth ← siguiente
-2. Cargar catálogo y fotografía reales
-3. Deploy en Vercel
-4. Rotar la llave secreta (se compartió por chat durante la configuración)
+2. Rotar la llave secreta (se compartió por chat durante la configuración)
+3. Cargar catálogo y fotografía reales
+4. Dominio propio
 
 ---
 
 ## Última tarea realizada
 
-**2026-07-25 — Conectar Supabase**
+**2026-07-28 — Deploy en Vercel**
 
-Esquema ejecutado (6 tablas, trigger de stock, RLS, bucket `productos`).
-Los seis servicios ahora leen y escriben en Supabase; se eliminó
-`mock-data.ts`. Catálogo cargado: 9 productos con fotos y 115 variantes.
-Corregido en el camino: el trigger necesitaba `::product_status` explícito,
-y `publicDb()` cae a un cliente sin cookies fuera de una petición.
+Proyecto `luigis/aura-fit-store` vinculado al repositorio, variables de
+entorno configuradas y producción en línea. Las 20 rutas responden bien,
+el catálogo sale de Supabase y `/admin` queda protegido por el middleware.
+
+En el camino: Vercel rechazó el primer intento por una vulnerabilidad de
+Next.js 15.5.4 — se actualizó a 15.5.22. También se generó un favicon de
+7 KB recortando el emblema del logotipo, que pesaba 1.5 MB.
 
 ## Próximo objetivo
 
-**Crear el usuario administrador.** El middleware ya bloquea `/admin`; sin
-usuario en Supabase Auth no se puede entrar al panel.
+**Crear el usuario administrador.** Sin usuario en Supabase Auth no se
+puede entrar al panel, ni en local ni en producción.
 
 ---
 
@@ -217,7 +221,8 @@ usuario en Supabase Auth no se puede entrar al panel.
 
 | Problema | Impacto | Solución |
 | --- | --- | --- |
-| `/admin` sin autenticación | **Alto** — no publicar así | Supabase Auth |
+| Sin usuario administrador | **Alto** — el panel es inaccesible | Crearlo en Supabase Auth |
+| Llave secreta compartida por chat | Medio | Rotarla en Settings → API Keys |
 | Ajustes en archivo local | No funciona en Vercel (FS de solo lectura) | Tabla `store_settings` |
 | Mutaciones en memoria | Se pierden al reiniciar el servidor | Supabase |
 | Fotos de Unsplash | No son prendas AURA FIT | Fotografía real en Storage |

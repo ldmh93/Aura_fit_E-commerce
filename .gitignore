@@ -20,3 +20,5 @@ next-env.d.ts
 
 # Ajustes de la tienda guardados en local (pasan a Supabase más adelante)
 .data
+
+.vercel

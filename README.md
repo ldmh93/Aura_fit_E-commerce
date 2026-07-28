@@ -3,6 +3,8 @@
 Tienda en línea de **AURA FIT**, proveedor de ropa deportiva.
 Catálogo corto, pedidos por WhatsApp y entrega en punto de encuentro.
 
+**En línea:** <https://aura-fit-store.vercel.app>
+
 ## Cómo funciona el negocio
 
 - Dos categorías: **Hombre** y **Mujer**.
@@ -58,8 +60,9 @@ Sin ellas la app no puede leer el catálogo.
 | `/admin/cupones`       | Alta, activar/desactivar, eliminar                |
 | `/admin/ajustes`       | WhatsApp, aviso de entrega, umbral de stock       |
 
-> ⚠️ El panel todavía **no exige contraseña** porque Supabase Auth no está
-> conectado. No publicar el sitio hasta completar ese paso.
+> El panel exige sesión de Supabase Auth. Para entrar hay que crear un
+> usuario en **Supabase → Authentication → Users** con *Auto Confirm User*
+> activado.
 
 ## Comandos
 

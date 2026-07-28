@@ -3,7 +3,9 @@
 > Lista viva de trabajo. El contexto del proyecto está en `CLAUDE.md`.
 > Se trabaja **una tarea a la vez**, de arriba hacia abajo.
 >
-> Última actualización: **2026-07-25**
+> Última actualización: **2026-07-28**
+>
+> En línea: <https://aura-fit-store.vercel.app>
 
 ---
 
@@ -43,16 +45,12 @@ La `service_role` se compartió por chat durante la configuración.
 - [ ] Actualizar `SUPABASE_SERVICE_ROLE_KEY` en `.env.local`
 - [ ] Reiniciar el servidor y comprobar que el panel sigue funcionando
 
-### 4. Deploy en Vercel
+### 4. Dominio y analítica
 
-- [ ] Importar el repositorio en Vercel
-- [ ] Configurar las variables de entorno (las mismas de `.env.local`)
-- [ ] Ajustar `NEXT_PUBLIC_SITE_URL` al dominio final
+- [ ] Conectar dominio propio en Vercel → Settings → Domains
+- [ ] Actualizar `NEXT_PUBLIC_SITE_URL` al dominio final y redesplegar
 - [ ] Configurar `NEXT_PUBLIC_META_PIXEL_ID` y `NEXT_PUBLIC_GA_ID`
-- [ ] Revisar Core Web Vitals con datos reales
-
-**Requisito previo:** tarea 1 terminada. Sin usuario administrador el panel
-queda inaccesible; sin el middleware activo quedaría abierto.
+- [ ] Revisar Core Web Vitals con tráfico real
 
 ---
 
@@ -69,6 +67,19 @@ queda inaccesible; sin el middleware activo quedaría abierto.
 ---
 
 ## ✅ Terminado
+
+<details>
+<summary>2026-07-28 · Deploy en Vercel</summary>
+
+- Proyecto `luigis/aura-fit-store` vinculado al repositorio de GitHub
+- Variables de entorno configuradas en producción y preview
+- Producción en línea: <https://aura-fit-store.vercel.app>
+- Next.js actualizado de 15.5.4 a 15.5.22: Vercel bloqueaba el deploy por
+  una vulnerabilidad conocida
+- Favicon de 7 KB recortando el emblema (el logotipo pesaba 1.5 MB)
+- Verificadas 20 rutas en producción, con `/admin` protegido
+
+</details>
 
 <details>
 <summary>2026-07-25 · Conectar Supabase</summary>

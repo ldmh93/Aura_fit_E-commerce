@@ -42,7 +42,8 @@ export const metadata: Metadata = {
     images: [SITE.logo],
   },
   robots: { index: true, follow: true },
-  icons: { icon: SITE.logo, apple: SITE.logo },
+  // Los iconos salen de src/app/icon.png y apple-icon.png (7 KB en vez de
+  // los 1.5 MB del logotipo completo, que además era ilegible a 64 px).
 };
 
 export const viewport: Viewport = {

@@ -28,6 +28,7 @@ import {
   toggleCoupon,
 } from "@/services/coupons.service";
 import { saveSettings } from "@/services/settings.service";
+import { DENIED, isAdmin } from "./guard";
 import { ONE_SIZE, colorHex, sortSizes } from "@/lib/config";
 import type { OrderStatus, ProductStatus, Size } from "@/types";
 import { sanitizePhone, sanitizeText, slugify } from "@/utils";
@@ -96,6 +97,8 @@ export async function createProductAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  if (!(await isAdmin())) return DENIED;
+
   const input = parseProductForm(formData);
 
   const error = validateProduct(input);
@@ -113,6 +116,8 @@ export async function updateProductAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  if (!(await isAdmin())) return DENIED;
+
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, message: "Producto no identificado." };
 
@@ -129,12 +134,16 @@ export async function updateProductAction(
 }
 
 export async function deleteProductAction(formData: FormData) {
+  if (!(await isAdmin())) return;
+
   const id = String(formData.get("id") ?? "");
   if (id) await deleteProduct(id);
   revalidateCatalog();
 }
 
 export async function toggleProductAction(formData: FormData) {
+  if (!(await isAdmin())) return;
+
   const id = String(formData.get("id") ?? "");
   if (id) await toggleProductVisibility(id);
   revalidateCatalog();
@@ -146,6 +155,8 @@ export async function saveCategoryAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  if (!(await isAdmin())) return DENIED;
+
   const id = String(formData.get("id") ?? "");
   const name = sanitizeText(formData.get("name"), 60);
 
@@ -180,6 +191,8 @@ export async function saveCategoryAction(
 }
 
 export async function deleteCategoryAction(formData: FormData) {
+  if (!(await isAdmin())) return;
+
   const id = String(formData.get("id") ?? "");
   if (id) await deleteCategory(id);
   revalidateCatalog();
@@ -188,6 +201,8 @@ export async function deleteCategoryAction(formData: FormData) {
 /* ── Inventario ──────────────────────────────────────────────── */
 
 export async function updateInventoryAction(formData: FormData) {
+  if (!(await isAdmin())) return;
+
   const id = String(formData.get("id") ?? "");
   const quantity = Number(formData.get("quantity")) || 0;
   if (id) await updateInventoryQuantity(id, quantity);
@@ -195,6 +210,8 @@ export async function updateInventoryAction(formData: FormData) {
 }
 
 export async function adjustInventoryAction(formData: FormData) {
+  if (!(await isAdmin())) return;
+
   const id = String(formData.get("id") ?? "");
   const delta = Number(formData.get("delta")) || 0;
   if (id && delta) await adjustInventoryQuantity(id, delta);
@@ -204,6 +221,8 @@ export async function adjustInventoryAction(formData: FormData) {
 /* ── Pedidos ─────────────────────────────────────────────────── */
 
 export async function updateOrderStatusAction(formData: FormData) {
+  if (!(await isAdmin())) return;
+
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "") as OrderStatus;
   if (id && status) await updateOrderStatus(id, status);
@@ -215,6 +234,8 @@ export async function updateOrderDetailsAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  if (!(await isAdmin())) return DENIED;
+
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, message: "Pedido no identificado." };
 
@@ -233,6 +254,8 @@ export async function createCouponAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  if (!(await isAdmin())) return DENIED;
+
   const code = sanitizeText(formData.get("code"), 40).toUpperCase();
   const discount = Number(formData.get("discount")) || 0;
   const startsAt = String(formData.get("starts_at") ?? "");
@@ -258,12 +281,16 @@ export async function createCouponAction(
 }
 
 export async function toggleCouponAction(formData: FormData) {
+  if (!(await isAdmin())) return;
+
   const id = String(formData.get("id") ?? "");
   if (id) await toggleCoupon(id);
   revalidatePath("/admin/cupones");
 }
 
 export async function deleteCouponAction(formData: FormData) {
+  if (!(await isAdmin())) return;
+
   const id = String(formData.get("id") ?? "");
   if (id) await deleteCoupon(id);
   revalidatePath("/admin/cupones");
@@ -275,6 +302,8 @@ export async function saveSettingsAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  if (!(await isAdmin())) return DENIED;
+
   const whatsappNumber = sanitizePhone(formData.get("whatsappNumber"));
 
   if (whatsappNumber.length < 10)

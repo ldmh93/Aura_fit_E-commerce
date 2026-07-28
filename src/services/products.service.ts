@@ -1,6 +1,7 @@
 import { adminDb, publicDb } from "@/services/db";
 import { sortSizes } from "@/lib/config";
 import type {
+  OrderItem,
   Product,
   ProductColor,
   ProductFilters,
@@ -130,12 +131,6 @@ export async function getProducts(
   return products;
 }
 
-export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
-  const products = await getProducts();
-  const featured = products.filter((p) => p.featured);
-  return (featured.length ? featured : products).slice(0, limit);
-}
-
 export async function getProductBySlug(
   slug: string,
 ): Promise<ProductWithInventory | null> {
@@ -222,6 +217,111 @@ export async function getCatalogFacets(category?: string): Promise<{
       a.name.localeCompare(b.name, "es"),
     ),
     sizes: sortSizes([...sizes]),
+  };
+}
+
+/* ── Checkout ────────────────────────────────────────────────── */
+
+export interface RequestedLine {
+  product_id: string;
+  size: string;
+  color: string;
+  quantity: number;
+}
+
+export interface PricedCheckout {
+  ok: boolean;
+  items: OrderItem[];
+  subtotal: number;
+  error?: string;
+}
+
+/**
+ * Reconstruye el pedido desde la base de datos.
+ *
+ * El carrito vive en el navegador, así que nombre, precio y existencia que
+ * llegan del cliente son solo una propuesta: aquí se descartan y se vuelven
+ * a leer del catálogo. Sin esto, cualquiera podría registrar un pedido con
+ * el precio que quisiera o pedir más piezas de las que hay.
+ */
+export async function priceCheckout(
+  lines: RequestedLine[],
+): Promise<PricedCheckout> {
+  const fail = (error: string): PricedCheckout => ({
+    ok: false,
+    items: [],
+    subtotal: 0,
+    error,
+  });
+
+  const ids = [...new Set(lines.map((l) => l.product_id))];
+  if (!ids.length) return fail("Tu pedido está vacío.");
+
+  const db = await publicDb();
+
+  const [{ data: productRows }, { data: inventoryRows }] = await Promise.all([
+    db.from("products").select(SELECT).in("id", ids),
+    db
+      .from("inventory")
+      .select("product_id,size,color,quantity")
+      .in("product_id", ids),
+  ]);
+
+  const products = new Map(
+    ((productRows ?? []) as unknown as Row[])
+      .map(mapRow)
+      .map((p) => [p.id, p]),
+  );
+
+  const stock = new Map(
+    (inventoryRows ?? []).map((entry) => [
+      `${entry.product_id}__${entry.size}__${entry.color}`,
+      entry.quantity as number,
+    ]),
+  );
+
+  const items: OrderItem[] = [];
+
+  for (const line of lines) {
+    const product = products.get(line.product_id);
+
+    // Un producto oculto no se puede pedir aunque quede en el carrito.
+    if (!product || product.status === "oculto") {
+      return fail("Uno de los productos ya no está disponible.");
+    }
+
+    const quantity = Math.floor(line.quantity);
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      return fail(`Cantidad inválida en “${product.name}”.`);
+    }
+
+    const available =
+      stock.get(`${line.product_id}__${line.size}__${line.color}`) ?? 0;
+
+    if (available < quantity) {
+      return fail(
+        available === 0
+          ? `“${product.name}” en talla ${line.size} y color ${line.color} se agotó.`
+          : `De “${product.name}” talla ${line.size} solo quedan ${available}.`,
+      );
+    }
+
+    items.push({
+      product_id: product.id,
+      name: product.name,
+      sku: product.sku,
+      size: line.size as Size,
+      color: line.color,
+      quantity,
+      unit_price: product.price,
+      image: product.images[0] ?? "",
+    });
+  }
+
+  return {
+    ok: true,
+    items,
+    subtotal: items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0),
   };
 }
 

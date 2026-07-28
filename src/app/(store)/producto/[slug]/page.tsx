@@ -88,9 +88,16 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   return (
     <>
+      {/*
+        `JSON.stringify` no escapa "<": un nombre de producto que contuviera
+        "</script>" cerraría la etiqueta e inyectaría HTML en la página.
+        Escapar el carácter deja el JSON válido y cierra esa puerta.
+      */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
       />
 
       {/* pb extra en móvil: la barra de compra fija ocupa la parte baja */}

@@ -1,5 +1,5 @@
 import { DELIVERY, WHATSAPP } from "@/lib/config";
-import type { CartItem } from "@/types";
+import type { OrderItem } from "@/types";
 import { formatPrice } from "@/utils";
 
 /**
@@ -18,7 +18,8 @@ export function buildOrderMessage({
   customerName,
   orderNumber,
 }: {
-  items: CartItem[];
+  /** Líneas confirmadas por el servidor, no el carrito del navegador. */
+  items: OrderItem[];
   subtotal: number;
   discount: number;
   total: number;

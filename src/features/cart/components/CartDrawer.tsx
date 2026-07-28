@@ -69,23 +69,29 @@ export function CartDrawer() {
       const result = await checkoutAction({
         customerName: name,
         phone,
-        items,
+        // Solo la referencia: el servidor pone precios y nombres.
+        items: items.map((item) => ({
+          product_id: item.product_id,
+          size: item.size,
+          color: item.color,
+          quantity: item.quantity,
+        })),
         couponCode: coupon?.code ?? null,
       });
 
-      if (!result.ok) {
+      if (!result.ok || !result.items) {
         setError(result.error ?? "No pudimos procesar tu pedido.");
         return;
       }
 
-      trackInitiateCheckout(items, total);
+      trackInitiateCheckout(items, result.total ?? total);
 
       const message = buildOrderMessage({
-        items,
-        subtotal,
-        discount,
-        total,
-        couponCode: coupon?.code ?? null,
+        items: result.items,
+        subtotal: result.subtotal ?? subtotal,
+        discount: result.discount ?? discount,
+        total: result.total ?? total,
+        couponCode: result.couponCode ?? null,
         customerName: name,
         orderNumber: result.orderNumber,
       });

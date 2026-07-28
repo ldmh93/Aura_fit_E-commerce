@@ -72,11 +72,7 @@ export async function getInventory(search?: string): Promise<InventoryRow[]> {
 }
 
 export async function getLowStockRows(): Promise<InventoryRow[]> {
-  const [rows, settings] = await Promise.all([getInventory(), getSettings()]);
-
-  return rows
-    .filter((row) => row.quantity <= settings.lowStockThreshold)
-    .sort((a, b) => a.quantity - b.quantity);
+  return (await getInventoryOverview()).lowStock;
 }
 
 export async function updateInventoryQuantity(
@@ -118,16 +114,42 @@ export interface InventorySummary {
   outOfStock: number;
 }
 
-export async function getInventorySummary(): Promise<InventorySummary> {
+export interface InventoryOverview {
+  rows: InventoryRow[];
+  summary: InventorySummary;
+  lowStock: InventoryRow[];
+  threshold: number;
+}
+
+/**
+ * Todo el panorama del inventario en una sola lectura.
+ *
+ * El dashboard necesitaba resumen y alertas a la vez, y cada uno pedía por
+ * su cuenta el inventario completo y los ajustes: cuatro consultas para
+ * responder lo mismo. Ahora se lee una vez y se deriva el resto.
+ */
+export async function getInventoryOverview(): Promise<InventoryOverview> {
   const [rows, settings] = await Promise.all([getInventory(), getSettings()]);
+  const threshold = settings.lowStockThreshold;
 
   return {
-    units: rows.reduce((sum, row) => sum + row.quantity, 0),
-    value: rows.reduce((sum, row) => sum + row.quantity * row.unit_price, 0),
-    variants: rows.length,
-    lowStock: rows.filter(
-      (row) => row.quantity > 0 && row.quantity <= settings.lowStockThreshold,
-    ).length,
-    outOfStock: rows.filter((row) => row.quantity === 0).length,
+    rows,
+    threshold,
+    lowStock: rows
+      .filter((row) => row.quantity <= threshold)
+      .sort((a, b) => a.quantity - b.quantity),
+    summary: {
+      units: rows.reduce((sum, row) => sum + row.quantity, 0),
+      value: rows.reduce((sum, row) => sum + row.quantity * row.unit_price, 0),
+      variants: rows.length,
+      lowStock: rows.filter(
+        (row) => row.quantity > 0 && row.quantity <= threshold,
+      ).length,
+      outOfStock: rows.filter((row) => row.quantity === 0).length,
+    },
   };
+}
+
+export async function getInventorySummary(): Promise<InventorySummary> {
+  return (await getInventoryOverview()).summary;
 }

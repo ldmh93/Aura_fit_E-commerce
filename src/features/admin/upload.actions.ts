@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasServiceRole } from "@/lib/env";
+import { isAdmin } from "./guard";
 import { slugify } from "@/utils";
 
 /**
@@ -22,6 +23,15 @@ export interface UploadResult {
 export async function uploadProductImagesAction(
   formData: FormData,
 ): Promise<UploadResult> {
+  // Sin esto, cualquiera podría llenar el bucket de archivos ajenos.
+  if (!(await isAdmin())) {
+    return {
+      ok: false,
+      urls: [],
+      error: "Tu sesión expiró. Vuelve a iniciar sesión para subir fotos.",
+    };
+  }
+
   const supabase = createAdminClient();
 
   if (!supabase || !hasServiceRole) {

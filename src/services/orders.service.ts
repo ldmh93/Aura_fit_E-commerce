@@ -1,5 +1,5 @@
 import { adminDb } from "@/services/db";
-import { getInventorySummary, getLowStockRows } from "@/services/inventory.service";
+import { getInventoryOverview } from "@/services/inventory.service";
 import type {
   DashboardStats,
   Order,
@@ -55,17 +55,6 @@ export async function getOrders(options?: {
   if (error) throw new Error(`No se pudieron leer los pedidos: ${error.message}`);
 
   return (data ?? []).map(mapRow);
-}
-
-export async function getOrderById(id: string): Promise<Order | null> {
-  const db = adminDb();
-  const { data } = await db
-    .from("orders")
-    .select(SELECT)
-    .eq("id", id)
-    .maybeSingle();
-
-  return data ? mapRow(data) : null;
 }
 
 export interface NewOrder {
@@ -141,11 +130,11 @@ const dayFormatter = new Intl.DateTimeFormat("es-MX", {
 export async function getDashboardStats(): Promise<DashboardStats> {
   const db = adminDb();
 
-  const [orders, inventory, lowStock] = await Promise.all([
+  const [orders, overview] = await Promise.all([
     getOrders(),
-    getInventorySummary(),
-    getLowStockRows(),
+    getInventoryOverview(),
   ]);
+  const { summary: inventory, lowStock } = overview;
 
   const { data: productRows } = await db
     .from("products")

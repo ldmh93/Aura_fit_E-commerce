@@ -63,7 +63,11 @@ crece. Una categoría con productos asignados no se puede eliminar.
 - Si todas las variantes están en cero, el producto pasa a `agotado`
   automáticamente y no se puede pedir. Sigue visible para SEO y demanda.
 - El stock **no** se descuenta al agregar al carrito. Se descuenta cuando el
-  administrador marca el pedido como `confirmado`.
+  administrador marca el pedido como `confirmado`, y vuelve al inventario si
+  el pedido se cancela o regresa a `pendiente`.
+  Lo hace la función `set_order_status` de Postgres, en una sola transacción:
+  estado e inventario se mueven juntos o no se mueven.
+  La columna `orders.stock_applied` evita descontar dos veces.
 - `products.stock` es un valor derivado del inventario: nunca se escribe a
   mano desde el formulario.
 
@@ -112,4 +116,9 @@ Solo `pagado` y `entregado` cuentan como venta en las estadísticas.
 - Meta Pixel y GA4 se activan solo si hay ID configurado.
 - Eventos: `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase`.
 - `Purchase` se dispara cuando el administrador marca el pedido como `pagado`,
-  no al enviar el WhatsApp.
+  no al enviar el WhatsApp. Se envía una sola vez por pedido.
+
+  **Limitación conocida:** el evento sale del navegador del administrador, así
+  que la atribución corresponde a ese equipo y no al del cliente. Para
+  atribución real haría falta la API de Conversiones de Meta, que necesita un
+  token de acceso aparte.

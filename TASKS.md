@@ -11,6 +11,19 @@
 
 ## 🔜 Siguiente tarea
 
+### 0. Ejecutar la migración 0003 en Supabase
+
+Activa el descuento automático de inventario al confirmar un pedido.
+Sin ella el panel funciona, pero el stock hay que ajustarlo a mano.
+
+- [ ] Abrir `supabase/EJECUTAR-AHORA-0003.sql`, copiar todo
+- [ ] Pegarlo en el SQL Editor de Supabase y ejecutar
+- [ ] Confirmar: confirmar un pedido baja las piezas; cancelarlo las devuelve
+
+También conviene revisar en **Supabase → Authentication → URL Configuration**
+que `https://aura-fit-store.vercel.app/auth/confirmar` esté en la lista de
+redirecciones permitidas; si no, el enlace de recuperar contraseña no abre.
+
 ### 1. Crear el usuario administrador
 
 El middleware ya bloquea `/admin` y redirige a `/admin/login`. Falta el

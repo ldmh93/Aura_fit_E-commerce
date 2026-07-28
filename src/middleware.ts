@@ -19,10 +19,14 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
+
+  // Rutas del panel accesibles sin sesión: quien va a recuperar su
+  // contraseña, por definición, todavía no puede entrar.
   const isLoginRoute = pathname === "/admin/login";
+  const isPublicAdminRoute = isLoginRoute || pathname === "/admin/recuperar";
 
   const toLogin = () => {
-    if (isLoginRoute) return response;
+    if (isPublicAdminRoute) return response;
     const url = request.nextUrl.clone();
     url.pathname = "/admin/login";
     url.searchParams.set("redirect", pathname);

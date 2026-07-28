@@ -89,13 +89,43 @@ export async function createOrder(order: NewOrder): Promise<string | null> {
   }
 }
 
+/**
+ * Cambia el estado y mueve el inventario en consecuencia.
+ *
+ * Confirmar un pedido aparta las piezas; cancelarlo o devolverlo a
+ * pendiente las libera. Lo hace una función de Postgres para que estado e
+ * inventario cambien juntos o no cambien: si se hiciera desde aquí en dos
+ * pasos, un fallo entre ambos dejaría el stock descuadrado.
+ *
+ * Si la función todavía no está instalada (migración 0003), se cae al
+ * cambio de estado simple para no dejar el panel inservible.
+ */
 export async function updateOrderStatus(
   id: string,
   status: OrderStatus,
 ): Promise<boolean> {
   const db = adminDb();
-  const { error } = await db.from("orders").update({ status }).eq("id", id);
-  return !error;
+
+  const { error } = await db.rpc("set_order_status", {
+    p_order_id: id,
+    p_status: status,
+  });
+
+  if (!error) return true;
+
+  // PGRST202: PostgREST no encuentra la función. 42883: Postgres tampoco.
+  // Pasa mientras la migración 0003 no se haya ejecutado.
+  const missingFunction =
+    error.code === "PGRST202" ||
+    error.code === "42883" ||
+    /could not find the function|does not exist/i.test(error.message ?? "");
+
+  if (missingFunction) {
+    const fallback = await db.from("orders").update({ status }).eq("id", id);
+    return !fallback.error;
+  }
+
+  return false;
 }
 
 /** Guarda el punto de encuentro acordado y las notas internas. */

@@ -7,8 +7,8 @@ import {
 } from "@/features/admin/components/AdminUI";
 import { SearchBox } from "@/features/admin/components/SearchBox";
 import { OrderDetailsForm } from "@/features/admin/components/OrderDetailsForm";
+import { OrderStatusForm } from "@/features/admin/components/OrderStatusForm";
 import { Badge } from "@/components/ui/Badge";
-import { updateOrderStatusAction } from "@/features/admin/actions";
 import { getOrders } from "@/services/orders.service";
 import { ORDER_STATUS_LABELS } from "@/lib/config";
 import type { OrderStatus } from "@/types";
@@ -175,37 +175,8 @@ export default async function AdminOrdersPage({
                 ) : null}
 
                 {/* Acciones */}
-                <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-white/8 pt-4">
-                  <form
-                    action={updateOrderStatusAction}
-                    className="flex items-center gap-2"
-                  >
-                    <input type="hidden" name="id" value={order.id} />
-                    <label
-                      htmlFor={`status-${order.id}`}
-                      className="text-xs uppercase tracking-[0.14em] text-mist"
-                    >
-                      Estado
-                    </label>
-                    <select
-                      id={`status-${order.id}`}
-                      name="status"
-                      defaultValue={order.status}
-                      className="rounded-lg border border-white/10 bg-steel px-3 py-2 text-xs text-white focus:border-aura/60 focus:outline-none"
-                    >
-                      {STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {ORDER_STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="submit"
-                      className="rounded-lg border border-white/12 px-3 py-2 text-xs text-mist transition-colors hover:border-aura hover:text-aura"
-                    >
-                      Guardar
-                    </button>
-                  </form>
+                <div className="mt-5 border-t border-white/8 pt-4">
+                  <OrderStatusForm order={order} />
                 </div>
 
                 <details className="mt-3">

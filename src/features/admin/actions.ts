@@ -38,6 +38,15 @@ export interface ActionState {
   message: string;
 }
 
+/** Estados válidos de un pedido. Se valida contra esta lista, no a ciegas. */
+const ORDER_STATUSES: OrderStatus[] = [
+  "pendiente",
+  "confirmado",
+  "pagado",
+  "entregado",
+  "cancelado",
+];
+
 /** Revalida todo lo que depende del catálogo. */
 function revalidateCatalog() {
   revalidatePath("/", "layout");
@@ -220,14 +229,28 @@ export async function adjustInventoryAction(formData: FormData) {
 
 /* ── Pedidos ─────────────────────────────────────────────────── */
 
-export async function updateOrderStatusAction(formData: FormData) {
-  if (!(await isAdmin())) return;
+/**
+ * Cambia el estado del pedido. Devuelve el resultado para que la pantalla
+ * pueda reaccionar —por ejemplo, disparar el evento de compra.
+ */
+export async function updateOrderStatusAction(input: {
+  id: string;
+  status: OrderStatus;
+}): Promise<ActionState> {
+  if (!(await isAdmin())) return DENIED;
 
-  const id = String(formData.get("id") ?? "");
-  const status = String(formData.get("status") ?? "") as OrderStatus;
-  if (id && status) await updateOrderStatus(id, status);
-  revalidatePath("/admin/pedidos");
-  revalidatePath("/admin");
+  const status = sanitizeText(input.status, 20) as OrderStatus;
+  if (!input.id || !ORDER_STATUSES.includes(status)) {
+    return { ok: false, message: "Estado no válido." };
+  }
+
+  const ok = await updateOrderStatus(input.id, status);
+  if (!ok) return { ok: false, message: "No se pudo actualizar el pedido." };
+
+  // El inventario cambió: la tienda tiene que reflejarlo.
+  revalidateCatalog();
+
+  return { ok: true, message: "Pedido actualizado." };
 }
 
 export async function updateOrderDetailsAction(

@@ -160,7 +160,34 @@ Lista viva y priorizada en **`TASKS.md`**. Resumen:
 
 ---
 
+## Seguridad — cómo está montada
+
+Tres capas, y ninguna se apoya en las otras:
+
+1. **Middleware** — bloquea `/admin` sin sesión. Falla cerrado: ante
+   variables faltantes o error de Supabase, bloquea.
+   Excepciones públicas: `/admin/login` y `/admin/recuperar`.
+2. **Server Actions** — cada acción que escribe comprueba la sesión con
+   `features/admin/guard.ts`. Son endpoints HTTP: no basta el middleware.
+3. **RLS en Postgres** — lectura pública acotada, escritura solo autenticada.
+
+`adminDb()` omite RLS, así que **toda acción que lo use debe llamar antes a
+`isAdmin()`**. Los precios del checkout se releen del catálogo con
+`priceCheckout()`: nada de lo que manda el navegador se toma como cierto.
+
 ## Última tarea realizada
+
+**2026-07-28 — Auditoría de seguridad y funcionalidades pendientes**
+
+Se cerraron dos fallos críticos (Server Actions sin autorización; middleware
+que fallaba abierto) y uno alto (el checkout confiaba en los precios del
+cliente). Se completaron las tres funcionalidades que faltaban: recuperación
+de contraseña, evento Purchase y descuento automático de inventario al
+confirmar un pedido.
+
+**Pendiente del usuario:** ejecutar `supabase/EJECUTAR-AHORA-0003.sql` en
+Supabase para activar el descuento de inventario. Hasta entonces el cambio de
+estado funciona, pero sin tocar el stock.
 
 **2026-07-28 — Deploy en Vercel**
 

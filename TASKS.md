@@ -11,18 +11,19 @@
 
 ## 🔜 Siguiente tarea
 
-### 0. Ejecutar la migración 0003 en Supabase
+### 0. Permitir la URL de recuperación de contraseña
 
-Activa el descuento automático de inventario al confirmar un pedido.
-Sin ella el panel funciona, pero el stock hay que ajustarlo a mano.
+En **Supabase → Authentication → URL Configuration**, agregar a las
+redirecciones permitidas:
 
-- [ ] Abrir `supabase/EJECUTAR-AHORA-0003.sql`, copiar todo
-- [ ] Pegarlo en el SQL Editor de Supabase y ejecutar
-- [ ] Confirmar: confirmar un pedido baja las piezas; cancelarlo las devuelve
+```
+https://aura-fit-store.vercel.app/auth/confirmar
+```
 
-También conviene revisar en **Supabase → Authentication → URL Configuration**
-que `https://aura-fit-store.vercel.app/auth/confirmar` esté en la lista de
-redirecciones permitidas; si no, el enlace de recuperar contraseña no abre.
+- [ ] Agregada
+- [ ] Probado: pedir el enlace desde `/admin/recuperar` y cambiar la clave
+
+Sin esto, el correo llega pero el enlace no abre sesión.
 
 ### 1. Crear el usuario administrador
 
@@ -80,6 +81,23 @@ La `service_role` se compartió por chat durante la configuración.
 ---
 
 ## ✅ Terminado
+
+<details>
+<summary>2026-07-28 · Auditoría de seguridad y funcionalidades pendientes</summary>
+
+- Guardia de sesión en las 15 acciones del panel (probado: 0 de 17 pasan)
+- Middleware ahora falla cerrado
+- El checkout relee precios y existencias del catálogo (probado con
+  precio falsificado: el servidor lo corrigió a 599)
+- JSON-LD escapado, pantallas de error, código muerto eliminado
+- Recuperación de contraseña con protección contra redirector abierto
+- Evento Purchase al marcar pagado, una vez por pedido
+- Migración 0003 ejecutada: el inventario sigue al pedido.
+  Probado el ciclo completo: confirmar descuenta, cancelar devuelve,
+  reconfirmar vuelve a apartar. La función solo la puede llamar el
+  administrador autenticado (anónimo recibe 401).
+
+</details>
 
 <details>
 <summary>2026-07-28 · Deploy en Vercel</summary>

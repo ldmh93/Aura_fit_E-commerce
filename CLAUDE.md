@@ -185,9 +185,12 @@ cliente). Se completaron las tres funcionalidades que faltaban: recuperación
 de contraseña, evento Purchase y descuento automático de inventario al
 confirmar un pedido.
 
-**Pendiente del usuario:** ejecutar `supabase/EJECUTAR-AHORA-0003.sql` en
-Supabase para activar el descuento de inventario. Hasta entonces el cambio de
-estado funciona, pero sin tocar el stock.
+La migración 0003 ya está ejecutada: el inventario se mueve solo al cambiar
+el estado de un pedido, verificado con el ciclo completo.
+
+**Pendiente del usuario:** permitir la URL `/auth/confirmar` en
+Supabase → Authentication → URL Configuration, para que abra el enlace de
+recuperación de contraseña.
 
 **2026-07-28 — Deploy en Vercel**
 

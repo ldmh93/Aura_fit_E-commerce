@@ -62,12 +62,13 @@ Importante, porque define qué **no** debe aparecer en la interfaz:
 - Next.js Server Actions
 - API Routes solo cuando Server Actions no aplican
 
-**Datos — estado actual**
+**Datos**
 
-- El catálogo, los pedidos y los cupones viven en `src/lib/mock-data.ts`
-- Los ajustes de la tienda se guardan en `.data/settings.json`
-- **Supabase todavía no está conectado.** El esquema destino está escrito en
-  `supabase/migrations/` y los clientes en `src/lib/supabase/`
+- **Supabase conectado** — proyecto `npbzjnbsxsvwqvjjwjwh`
+- Tablas: `categories`, `products`, `inventory`, `orders`, `coupons`,
+  `store_settings`
+- Fotos en Supabase Storage, bucket público `productos`
+- Credenciales en `.env.local`, fuera del repositorio
 
 **Hosting**
 

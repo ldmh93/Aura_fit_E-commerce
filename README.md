@@ -25,8 +25,8 @@ npm run dev
 
 Abre <http://localhost:3000>.
 
-**La app funciona sin configurar nada.** Los datos viven en
-`src/lib/mock-data.ts` y los ajustes en `.data/settings.json`.
+Necesitas `.env.local` con las credenciales de Supabase (ver `.env.example`).
+Sin ellas la app no puede leer el catálogo.
 
 ## Rutas
 
@@ -72,7 +72,7 @@ npm run typecheck  # tsc --noEmit
 
 ## Siguiente paso: Supabase
 
-Todavía no está conectado, pero todo está preparado:
+Ya está conectado. Los archivos de referencia:
 
 - `supabase/migrations/0001_init.sql` — tablas, trigger de stock y RLS
 - `supabase/migrations/0002_storage.sql` — bucket `productos` para las fotos

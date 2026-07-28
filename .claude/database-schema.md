@@ -1,10 +1,10 @@
 # Base de datos — AURA FIT
 
-> **Supabase todavía no está conectado.** Los datos viven en
-> `src/lib/mock-data.ts` y `.data/settings.json`.
+> **Supabase está conectado** — proyecto `npbzjnbsxsvwqvjjwjwh`.
 >
-> Este documento describe el esquema destino, ya escrito en
-> `supabase/migrations/0001_init.sql` y `0002_storage.sql`.
+> El esquema vive en `supabase/migrations/0001_init.sql` y `0002_storage.sql`.
+> `supabase/INSTALAR-EN-SUPABASE.sql` junta ambos con el seed para poder
+> reinstalar todo de una sola pegada.
 
 ## Enums
 
@@ -111,7 +111,7 @@ Forma de cada item en `items`:
 
 ## store_settings
 
-Una sola fila (`id = 1`). Sustituye a `.data/settings.json`.
+Una sola fila (`id = 1`). Es la fuente de los ajustes editables.
 
 Nombre de tienda, descriptor, WhatsApp, aviso de entrega, horario, barra de
 aviso y umbral de stock bajo.

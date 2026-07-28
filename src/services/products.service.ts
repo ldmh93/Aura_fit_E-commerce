@@ -1,4 +1,5 @@
-import { mockCategories, mockInventory, mockProducts } from "@/lib/mock-data";
+import { adminDb, publicDb } from "@/services/db";
+import { sortSizes } from "@/lib/config";
 import type {
   Product,
   ProductColor,
@@ -7,84 +8,126 @@ import type {
   ProductWithInventory,
   Size,
 } from "@/types";
-import { sortSizes } from "@/lib/config";
 import { slugify } from "@/utils";
 
 /**
  * Capa de datos de producto — única puerta al catálogo.
- * Ningún componente lee los datos directamente.
- *
- * Hoy los datos viven en `src/lib/mock-data.ts`. Al conectar Supabase solo
- * cambia el interior de estas funciones; la UI no se entera.
+ * Ningún componente habla con Supabase directamente.
  * Ver .claude/architecture.md
  */
 
-function withCategory(product: Product): Product {
-  const category = mockCategories.find((c) => c.id === product.category_id);
-  return {
-    ...product,
-    category_name: category?.name,
-    category_slug: category?.slug,
-  };
+const SELECT =
+  "id,name,slug,description,features,material,price,old_price,sku,images,video,category_id,fit,sizes,colors,stock,featured,status,created_at,categories(name,slug)";
+
+interface Row {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  features: string[] | null;
+  material: string;
+  price: number | string;
+  old_price: number | string | null;
+  sku: string;
+  images: string[] | null;
+  video: string | null;
+  category_id: string | null;
+  fit: Product["fit"];
+  sizes: string[] | null;
+  colors: ProductColor[] | null;
+  stock: number;
+  featured: boolean;
+  status: ProductStatus;
+  created_at: string;
+  categories?: { name: string; slug: string } | null;
 }
 
-function applyFilters(products: Product[], filters: ProductFilters): Product[] {
-  let result = products;
+/** Postgres devuelve `numeric` como cadena: hay que convertirlo. */
+function toNumber(value: number | string | null): number | null {
+  if (value === null) return null;
+  return typeof value === "number" ? value : Number(value);
+}
 
-  if (filters.category) {
-    const category = mockCategories.find((c) => c.slug === filters.category);
-    result = result.filter((p) => p.category_id === category?.id);
-  }
-  if (filters.size) {
-    result = result.filter((p) => p.sizes.includes(filters.size!));
-  }
-  if (filters.color) {
-    result = result.filter((p) =>
-      p.colors.some((c) => c.name === filters.color),
-    );
-  }
-  if (typeof filters.minPrice === "number") {
-    result = result.filter((p) => p.price >= filters.minPrice!);
-  }
-  if (typeof filters.maxPrice === "number") {
-    result = result.filter((p) => p.price <= filters.maxPrice!);
-  }
-  if (filters.inStock) {
-    result = result.filter((p) => p.stock > 0);
-  }
-  if (filters.search) {
-    const term = filters.search.toLowerCase();
-    result = result.filter(
-      (p) =>
-        p.name.toLowerCase().includes(term) ||
-        p.description.toLowerCase().includes(term) ||
-        p.sku.toLowerCase().includes(term),
-    );
-  }
-
-  switch (filters.sort) {
-    case "precio-asc":
-      return [...result].sort((a, b) => a.price - b.price);
-    case "precio-desc":
-      return [...result].sort((a, b) => b.price - a.price);
-    case "nombre":
-      return [...result].sort((a, b) => a.name.localeCompare(b.name, "es"));
-    default:
-      return [...result].sort(
-        (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
-      );
-  }
+function mapRow(row: Row): Product {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    description: row.description ?? "",
+    features: row.features ?? [],
+    material: row.material ?? "",
+    price: toNumber(row.price) ?? 0,
+    old_price: toNumber(row.old_price),
+    sku: row.sku,
+    images: row.images ?? [],
+    video: row.video,
+    category_id: row.category_id ?? "",
+    category_name: row.categories?.name,
+    category_slug: row.categories?.slug,
+    fit: row.fit,
+    sizes: sortSizes((row.sizes ?? []) as Size[]),
+    colors: row.colors ?? [],
+    stock: row.stock,
+    featured: row.featured,
+    status: row.status,
+    created_at: row.created_at,
+  };
 }
 
 /** Catálogo público: todo lo que no está oculto. */
 export async function getProducts(
   filters: ProductFilters = {},
 ): Promise<Product[]> {
-  const visible = mockProducts
-    .filter((p) => p.status !== "oculto")
-    .map(withCategory);
+  const db = await publicDb();
 
-  return applyFilters(visible, filters);
+  // `!inner` hace que se pueda filtrar por la categoría relacionada.
+  const select = filters.category
+    ? SELECT.replace("categories(", "categories!inner(")
+    : SELECT;
+
+  let query = db.from("products").select(select).neq("status", "oculto");
+
+  if (filters.category) query = query.eq("categories.slug", filters.category);
+  if (filters.size) query = query.contains("sizes", [filters.size]);
+  if (typeof filters.minPrice === "number")
+    query = query.gte("price", filters.minPrice);
+  if (typeof filters.maxPrice === "number")
+    query = query.lte("price", filters.maxPrice);
+  if (filters.inStock) query = query.gt("stock", 0);
+  if (filters.search) {
+    const term = filters.search.replace(/[%,()]/g, "");
+    query = query.or(
+      `name.ilike.%${term}%,description.ilike.%${term}%,sku.ilike.%${term}%`,
+    );
+  }
+
+  switch (filters.sort) {
+    case "precio-asc":
+      query = query.order("price", { ascending: true });
+      break;
+    case "precio-desc":
+      query = query.order("price", { ascending: false });
+      break;
+    case "nombre":
+      query = query.order("name", { ascending: true });
+      break;
+    default:
+      query = query.order("created_at", { ascending: false });
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(`No se pudo leer el catálogo: ${error.message}`);
+
+  let products = (data as unknown as Row[]).map(mapRow);
+
+  // El color vive dentro de un jsonb: se filtra aquí, no en Postgres.
+  if (filters.color) {
+    products = products.filter((p) =>
+      p.colors.some((c) => c.name === filters.color),
+    );
+  }
+
+  return products;
 }
 
 export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
@@ -96,12 +139,29 @@ export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
 export async function getProductBySlug(
   slug: string,
 ): Promise<ProductWithInventory | null> {
-  const product = mockProducts.find((p) => p.slug === slug);
-  if (!product) return null;
+  const db = await publicDb();
+
+  const { data, error } = await db
+    .from("products")
+    .select(SELECT)
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const product = mapRow(data as unknown as Row);
+
+  const { data: inventory } = await db
+    .from("inventory")
+    .select("id,product_id,size,color,quantity")
+    .eq("product_id", product.id);
 
   return {
-    ...withCategory(product),
-    inventory: mockInventory.filter((i) => i.product_id === product.id),
+    ...product,
+    inventory: (inventory ?? []).map((entry) => ({
+      ...entry,
+      size: entry.size as Size,
+    })),
   };
 }
 
@@ -127,8 +187,13 @@ export async function getRelatedProducts(
 export async function getAllProductSlugs(): Promise<
   { slug: string; created_at: string }[]
 > {
-  const products = await getProducts();
-  return products.map((p) => ({ slug: p.slug, created_at: p.created_at }));
+  const db = await publicDb();
+  const { data } = await db
+    .from("products")
+    .select("slug,created_at")
+    .neq("status", "oculto");
+
+  return data ?? [];
 }
 
 /**
@@ -153,35 +218,44 @@ export async function getCatalogFacets(category?: string): Promise<{
   }
 
   return {
-    colors: [...colors.values()].sort((a, b) => a.name.localeCompare(b.name, "es")),
+    colors: [...colors.values()].sort((a, b) =>
+      a.name.localeCompare(b.name, "es"),
+    ),
     sizes: sortSizes([...sizes]),
   };
 }
 
 /* ── Administración ──────────────────────────────────────────── */
+/* Usa la llave secreta: el panel necesita ver también los ocultos. */
 
-/** Catálogo completo, incluye ocultos. */
 export async function getAdminProducts(search?: string): Promise<Product[]> {
-  let list = mockProducts.map(withCategory);
+  const db = adminDb();
+
+  let query = db
+    .from("products")
+    .select(SELECT)
+    .order("created_at", { ascending: false });
 
   if (search) {
-    const term = search.toLowerCase();
-    list = list.filter(
-      (p) =>
-        p.name.toLowerCase().includes(term) ||
-        p.sku.toLowerCase().includes(term) ||
-        (p.category_name ?? "").toLowerCase().includes(term),
-    );
+    const term = search.replace(/[%,()]/g, "");
+    query = query.or(`name.ilike.%${term}%,sku.ilike.%${term}%`);
   }
 
-  return list.sort(
-    (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
-  );
+  const { data, error } = await query;
+  if (error) throw new Error(`No se pudo leer el catálogo: ${error.message}`);
+
+  return (data as unknown as Row[]).map(mapRow);
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  const product = mockProducts.find((p) => p.id === id);
-  return product ? withCategory(product) : null;
+  const db = adminDb();
+  const { data } = await db
+    .from("products")
+    .select(SELECT)
+    .eq("id", id)
+    .maybeSingle();
+
+  return data ? mapRow(data as unknown as Row) : null;
 }
 
 export interface ProductInput {
@@ -203,23 +277,41 @@ export interface ProductInput {
   status: ProductStatus;
 }
 
+/** Columnas de `products`. `stock` se omite: lo calcula el trigger. */
+function toRow(input: ProductInput) {
+  return {
+    name: input.name,
+    slug: slugify(input.slug || input.name),
+    description: input.description,
+    features: input.features,
+    material: input.material,
+    price: input.price,
+    old_price: input.old_price,
+    sku: input.sku,
+    images: input.images,
+    video: input.video,
+    category_id: input.category_id,
+    fit: input.fit,
+    sizes: input.sizes,
+    colors: input.colors,
+    featured: input.featured,
+    status: input.status,
+  };
+}
+
 /** Crea el producto y sus variantes de inventario en cero. */
 export async function createProduct(input: ProductInput): Promise<boolean> {
-  const slug = slugify(input.slug || input.name);
-  if (mockProducts.some((p) => p.slug === slug)) return false;
+  const db = adminDb();
 
-  const id = `p-${Date.now()}`;
+  const { data, error } = await db
+    .from("products")
+    .insert(toRow(input))
+    .select("id")
+    .single();
 
-  mockProducts.unshift({
-    ...input,
-    slug,
-    id,
-    stock: 0,
-    status: "agotado",
-    created_at: new Date().toISOString(),
-  });
+  if (error || !data) return false;
 
-  syncVariants(id, input.sizes, input.colors);
+  await syncVariants(data.id as string, input.sizes, input.colors);
   return true;
 }
 
@@ -227,103 +319,89 @@ export async function updateProduct(
   id: string,
   input: ProductInput,
 ): Promise<boolean> {
-  const index = mockProducts.findIndex((p) => p.id === id);
-  if (index === -1) return false;
+  const db = adminDb();
 
-  const current = mockProducts[index]!;
-  const slug = slugify(input.slug || input.name);
+  const { error } = await db.from("products").update(toRow(input)).eq("id", id);
+  if (error) return false;
 
-  mockProducts[index] = {
-    ...current,
-    ...input,
-    slug,
-    // El stock lo manda el inventario, nunca el formulario.
-    stock: current.stock,
-  };
-
-  syncVariants(id, input.sizes, input.colors);
-  recalculateStock(id);
-
+  await syncVariants(id, input.sizes, input.colors);
   return true;
 }
 
 export async function deleteProduct(id: string): Promise<boolean> {
-  const index = mockProducts.findIndex((p) => p.id === id);
-  if (index === -1) return false;
-
-  mockProducts.splice(index, 1);
-  for (let i = mockInventory.length - 1; i >= 0; i -= 1) {
-    if (mockInventory[i]?.product_id === id) mockInventory.splice(i, 1);
-  }
-
-  return true;
+  const db = adminDb();
+  // El inventario se borra en cascada (ON DELETE CASCADE).
+  const { error } = await db.from("products").delete().eq("id", id);
+  return !error;
 }
 
 /** Alterna entre activo y oculto sin abrir el formulario. */
 export async function toggleProductVisibility(id: string): Promise<boolean> {
-  const product = mockProducts.find((p) => p.id === id);
-  if (!product) return false;
+  const db = adminDb();
 
-  product.status = product.status === "oculto" ? "activo" : "oculto";
-  if (product.status === "activo" && product.stock <= 0) {
-    product.status = "agotado";
-  }
+  const { data } = await db
+    .from("products")
+    .select("status,stock")
+    .eq("id", id)
+    .maybeSingle();
 
-  return true;
+  if (!data) return false;
+
+  const next =
+    data.status === "oculto" ? (data.stock > 0 ? "activo" : "agotado") : "oculto";
+
+  const { error } = await db
+    .from("products")
+    .update({ status: next })
+    .eq("id", id);
+
+  return !error;
 }
 
 /**
  * Crea las variantes que falten y borra las que ya no aplican.
  * Conserva las cantidades de las combinaciones que siguen existiendo.
  */
-function syncVariants(
+async function syncVariants(
   productId: string,
   sizes: Size[],
   colors: ProductColor[],
 ) {
+  const db = adminDb();
+
+  const { data: current } = await db
+    .from("inventory")
+    .select("id,size,color")
+    .eq("product_id", productId);
+
   const wanted = new Set(
     sizes.flatMap((size) => colors.map((color) => `${size}__${color.name}`)),
   );
 
-  for (let i = mockInventory.length - 1; i >= 0; i -= 1) {
-    const entry = mockInventory[i]!;
-    if (entry.product_id !== productId) continue;
-    if (!wanted.has(`${entry.size}__${entry.color}`)) {
-      mockInventory.splice(i, 1);
-    }
+  const obsolete = (current ?? [])
+    .filter((entry) => !wanted.has(`${entry.size}__${entry.color}`))
+    .map((entry) => entry.id);
+
+  if (obsolete.length) {
+    await db.from("inventory").delete().in("id", obsolete);
   }
 
-  for (const size of sizes) {
-    for (const color of colors) {
-      const exists = mockInventory.some(
-        (entry) =>
-          entry.product_id === productId &&
-          entry.size === size &&
-          entry.color === color.name,
-      );
-      if (!exists) {
-        mockInventory.push({
-          id: `inv-${productId}-${size}-${slugify(color.name)}`,
-          product_id: productId,
-          size,
-          color: color.name,
-          quantity: 0,
-        });
-      }
-    }
-  }
-}
+  const existing = new Set(
+    (current ?? []).map((entry) => `${entry.size}__${entry.color}`),
+  );
 
-/** Recalcula `stock` y el estado a partir del inventario real. */
-export function recalculateStock(productId: string) {
-  const product = mockProducts.find((p) => p.id === productId);
-  if (!product) return;
+  const missing = sizes.flatMap((size) =>
+    colors
+      .filter((color) => !existing.has(`${size}__${color.name}`))
+      .map((color) => ({
+        product_id: productId,
+        size,
+        color: color.name,
+        quantity: 0,
+      })),
+  );
 
-  product.stock = mockInventory
-    .filter((entry) => entry.product_id === productId)
-    .reduce((sum, entry) => sum + entry.quantity, 0);
-
-  if (product.status !== "oculto") {
-    product.status = product.stock > 0 ? "activo" : "agotado";
+  if (missing.length) {
+    await db.from("inventory").insert(missing);
   }
 }

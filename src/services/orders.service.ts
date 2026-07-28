@@ -1,39 +1,71 @@
-import { mockCategories, mockOrders, mockProducts } from "@/lib/mock-data";
+import { adminDb } from "@/services/db";
 import { getInventorySummary, getLowStockRows } from "@/services/inventory.service";
-import type { DashboardStats, Order, OrderItem, OrderStatus } from "@/types";
+import type {
+  DashboardStats,
+  Order,
+  OrderItem,
+  OrderStatus,
+  Product,
+} from "@/types";
 
-/** Pedidos. Llegan por WhatsApp y se administran desde /admin/pedidos. */
+/**
+ * Pedidos. Llegan por WhatsApp y se administran desde /admin/pedidos.
+ *
+ * Todo pasa por la llave secreta: los pedidos llevan datos de clientes y
+ * RLS los oculta al público a propósito.
+ */
+
+const SELECT =
+  "id,order_number,customer_name,phone,items,subtotal,discount,total,coupon_code,status,meeting_point,notes,created_at";
 
 /** Estados que cuentan como venta cerrada. */
 const PAID: OrderStatus[] = ["pagado", "entregado"];
+
+function mapRow(row: Record<string, unknown>): Order {
+  return {
+    ...(row as unknown as Order),
+    items: (row.items ?? []) as OrderItem[],
+    subtotal: Number(row.subtotal ?? 0),
+    discount: Number(row.discount ?? 0),
+    total: Number(row.total ?? 0),
+  };
+}
 
 export async function getOrders(options?: {
   status?: OrderStatus;
   search?: string;
 }): Promise<Order[]> {
-  let orders = [...mockOrders];
+  const db = adminDb();
 
-  if (options?.status) {
-    orders = orders.filter((o) => o.status === options.status);
-  }
+  let query = db
+    .from("orders")
+    .select(SELECT)
+    .order("created_at", { ascending: false });
+
+  if (options?.status) query = query.eq("status", options.status);
 
   if (options?.search) {
-    const term = options.search.toLowerCase();
-    orders = orders.filter(
-      (o) =>
-        o.customer_name.toLowerCase().includes(term) ||
-        o.phone.includes(term) ||
-        o.order_number.toLowerCase().includes(term),
+    const term = options.search.replace(/[%,()]/g, "");
+    query = query.or(
+      `customer_name.ilike.%${term}%,phone.ilike.%${term}%,order_number.ilike.%${term}%`,
     );
   }
 
-  return orders.sort(
-    (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
-  );
+  const { data, error } = await query;
+  if (error) throw new Error(`No se pudieron leer los pedidos: ${error.message}`);
+
+  return (data ?? []).map(mapRow);
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {
-  return mockOrders.find((o) => o.id === id) ?? null;
+  const db = adminDb();
+  const { data } = await db
+    .from("orders")
+    .select(SELECT)
+    .eq("id", id)
+    .maybeSingle();
+
+  return data ? mapRow(data) : null;
 }
 
 export interface NewOrder {
@@ -46,33 +78,35 @@ export interface NewOrder {
   coupon_code: string | null;
 }
 
-/** Registra el pedido antes de abrir WhatsApp. Devuelve el número. */
-export async function createOrder(order: NewOrder): Promise<string> {
-  const next = mockOrders.length + 121;
-  const orderNumber = `AF-${String(next).padStart(6, "0")}`;
+/**
+ * Registra el pedido antes de abrir WhatsApp.
+ * El cliente es anónimo, así que se usa la llave secreta desde el servidor.
+ * Devuelve el número de pedido, o null si no se pudo guardar: el pedido por
+ * WhatsApp debe salir igual aunque falle el registro.
+ */
+export async function createOrder(order: NewOrder): Promise<string | null> {
+  try {
+    const db = adminDb();
+    const { data, error } = await db
+      .from("orders")
+      .insert({ ...order, status: "pendiente" })
+      .select("order_number")
+      .single();
 
-  mockOrders.unshift({
-    ...order,
-    id: `ord-${Date.now()}`,
-    order_number: orderNumber,
-    status: "pendiente",
-    meeting_point: null,
-    notes: null,
-    created_at: new Date().toISOString(),
-  });
-
-  return orderNumber;
+    if (error || !data) return null;
+    return data.order_number as string;
+  } catch {
+    return null;
+  }
 }
 
 export async function updateOrderStatus(
   id: string,
   status: OrderStatus,
 ): Promise<boolean> {
-  const order = mockOrders.find((o) => o.id === id);
-  if (!order) return false;
-
-  order.status = status;
-  return true;
+  const db = adminDb();
+  const { error } = await db.from("orders").update({ status }).eq("id", id);
+  return !error;
 }
 
 /** Guarda el punto de encuentro acordado y las notas internas. */
@@ -80,17 +114,17 @@ export async function updateOrderDetails(
   id: string,
   details: { meeting_point?: string | null; notes?: string | null },
 ): Promise<boolean> {
-  const order = mockOrders.find((o) => o.id === id);
-  if (!order) return false;
+  const db = adminDb();
 
-  if (details.meeting_point !== undefined) {
-    order.meeting_point = details.meeting_point || null;
-  }
-  if (details.notes !== undefined) {
-    order.notes = details.notes || null;
-  }
+  const payload: Record<string, string | null> = {};
+  if (details.meeting_point !== undefined)
+    payload.meeting_point = details.meeting_point || null;
+  if (details.notes !== undefined) payload.notes = details.notes || null;
 
-  return true;
+  if (!Object.keys(payload).length) return true;
+
+  const { error } = await db.from("orders").update(payload).eq("id", id);
+  return !error;
 }
 
 /* ── Estadísticas ────────────────────────────────────────────── */
@@ -105,11 +139,26 @@ const dayFormatter = new Intl.DateTimeFormat("es-MX", {
 });
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const orders = await getOrders();
-  const [inventory, lowStock] = await Promise.all([
+  const db = adminDb();
+
+  const [orders, inventory, lowStock] = await Promise.all([
+    getOrders(),
     getInventorySummary(),
     getLowStockRows(),
   ]);
+
+  const { data: productRows } = await db
+    .from("products")
+    .select("id,status,stock,category_id,categories(name)");
+
+  type ProductRow = Pick<Product, "id" | "status" | "stock" | "category_id"> & {
+    categories?: { name: string } | null;
+  };
+
+  const products = (productRows ?? []) as unknown as ProductRow[];
+  const categoryOf = new Map(
+    products.map((p) => [p.id, p.categories?.name ?? "Sin categoría"]),
+  );
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -133,7 +182,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     0,
   );
 
-  // Ingresos por día — últimos 14 días
   const revenueByDay = Array.from({ length: 14 }, (_, index) => {
     const day = new Date(now);
     day.setDate(now.getDate() - (13 - index));
@@ -146,7 +194,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     };
   });
 
-  // Ingresos por mes — últimos 6 meses
   const revenueByMonth = Array.from({ length: 6 }, (_, index) => {
     const month = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
     const next = new Date(month.getFullYear(), month.getMonth() + 1, 1);
@@ -166,7 +213,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     "cancelado",
   ];
 
-  // Ventas por producto y por categoría
   const byProduct = new Map<string, { units: number; revenue: number }>();
   const byCategory = new Map<string, { units: number; revenue: number }>();
 
@@ -177,11 +223,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       product.revenue += item.quantity * item.unit_price;
       byProduct.set(item.name, product);
 
-      const catalogEntry = mockProducts.find((p) => p.id === item.product_id);
-      const categoryName =
-        mockCategories.find((c) => c.id === catalogEntry?.category_id)?.name ??
-        "Sin categoría";
-
+      const categoryName = categoryOf.get(item.product_id) ?? "Sin categoría";
       const category = byCategory.get(categoryName) ?? { units: 0, revenue: 0 };
       category.units += item.quantity;
       category.revenue += item.quantity * item.unit_price;
@@ -198,9 +240,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       ? Math.round(revenueMonth / monthPaid.length)
       : 0,
     unitsSoldMonth,
-    activeProducts: mockProducts.filter((p) => p.status === "activo").length,
-    hiddenProducts: mockProducts.filter((p) => p.status === "oculto").length,
-    outOfStockProducts: mockProducts.filter((p) => p.stock <= 0).length,
+    activeProducts: products.filter((p) => p.status === "activo").length,
+    hiddenProducts: products.filter((p) => p.status === "oculto").length,
+    outOfStockProducts: products.filter((p) => p.stock <= 0).length,
     lowStockVariants: lowStock.filter((row) => row.quantity > 0).length,
     inventoryUnits: inventory.units,
     inventoryValue: inventory.value,

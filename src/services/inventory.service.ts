@@ -1,9 +1,11 @@
-import { mockInventory, mockProducts } from "@/lib/mock-data";
-import { recalculateStock } from "@/services/products.service";
+import { adminDb } from "@/services/db";
 import { getSettings } from "@/services/settings.service";
-import type { InventoryEntry } from "@/types";
+import type { InventoryEntry, Size } from "@/types";
 
-/** Inventario por variante: producto + talla + color. */
+/**
+ * Inventario por variante: producto + talla + color.
+ * `products.stock` lo recalcula un trigger de Postgres, no este código.
+ */
 
 export interface InventoryRow extends InventoryEntry {
   product_name: string;
@@ -12,18 +14,46 @@ export interface InventoryRow extends InventoryEntry {
   unit_price: number;
 }
 
-export async function getInventory(search?: string): Promise<InventoryRow[]> {
-  let rows = mockInventory.map((entry) => {
-    const product = mockProducts.find((p) => p.id === entry.product_id);
-    return {
-      ...entry,
-      product_name: product?.name ?? "—",
-      product_slug: product?.slug ?? "",
-      sku: product?.sku ?? "",
-      unit_price: product?.price ?? 0,
-    };
-  });
+interface Row {
+  id: string;
+  product_id: string;
+  size: string;
+  color: string;
+  quantity: number;
+  products?: {
+    name: string;
+    slug: string;
+    sku: string;
+    price: number | string;
+  } | null;
+}
 
+function mapRow(row: Row): InventoryRow {
+  return {
+    id: row.id,
+    product_id: row.product_id,
+    size: row.size as Size,
+    color: row.color,
+    quantity: row.quantity,
+    product_name: row.products?.name ?? "—",
+    product_slug: row.products?.slug ?? "",
+    sku: row.products?.sku ?? "",
+    unit_price: Number(row.products?.price ?? 0),
+  };
+}
+
+export async function getInventory(search?: string): Promise<InventoryRow[]> {
+  const db = adminDb();
+
+  const { data, error } = await db
+    .from("inventory")
+    .select("id,product_id,size,color,quantity,products(name,slug,sku,price)");
+
+  if (error) throw new Error(`No se pudo leer el inventario: ${error.message}`);
+
+  let rows = (data as unknown as Row[]).map(mapRow);
+
+  // La búsqueda cruza campos de dos tablas: se resuelve aquí.
   if (search) {
     const term = search.toLowerCase();
     rows = rows.filter(
@@ -43,6 +73,7 @@ export async function getInventory(search?: string): Promise<InventoryRow[]> {
 
 export async function getLowStockRows(): Promise<InventoryRow[]> {
   const [rows, settings] = await Promise.all([getInventory(), getSettings()]);
+
   return rows
     .filter((row) => row.quantity <= settings.lowStockThreshold)
     .sort((a, b) => a.quantity - b.quantity);
@@ -52,13 +83,13 @@ export async function updateInventoryQuantity(
   id: string,
   quantity: number,
 ): Promise<boolean> {
-  const entry = mockInventory.find((i) => i.id === id);
-  if (!entry) return false;
+  const db = adminDb();
+  const { error } = await db
+    .from("inventory")
+    .update({ quantity: Math.max(0, Math.floor(quantity)) })
+    .eq("id", id);
 
-  entry.quantity = Math.max(0, Math.floor(quantity));
-  recalculateStock(entry.product_id);
-
-  return true;
+  return !error;
 }
 
 /** Suma o resta unidades sin escribir la cantidad completa. */
@@ -66,13 +97,17 @@ export async function adjustInventoryQuantity(
   id: string,
   delta: number,
 ): Promise<boolean> {
-  const entry = mockInventory.find((i) => i.id === id);
-  if (!entry) return false;
+  const db = adminDb();
 
-  entry.quantity = Math.max(0, entry.quantity + Math.floor(delta));
-  recalculateStock(entry.product_id);
+  const { data } = await db
+    .from("inventory")
+    .select("quantity")
+    .eq("id", id)
+    .maybeSingle();
 
-  return true;
+  if (!data) return false;
+
+  return updateInventoryQuantity(id, data.quantity + Math.floor(delta));
 }
 
 export interface InventorySummary {

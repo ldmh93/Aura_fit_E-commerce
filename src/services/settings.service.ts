@@ -1,18 +1,13 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { adminDb, publicDb } from "@/services/db";
 import { BUSINESS, SITE, WHATSAPP } from "@/lib/config";
 import type { StoreSettings } from "@/types";
 
 /**
- * Ajustes de la tienda editables desde /admin/ajustes.
- *
- * Mientras no haya Supabase se guardan en `.data/settings.json`.
- * Al conectar Supabase, esta es la única función que hay que cambiar:
- * la UI y el resto de la app no se enteran. Ver .claude/architecture.md
+ * Ajustes de la tienda, editables desde /admin/ajustes.
+ * Viven en la tabla `store_settings`, que tiene una sola fila (id = 1).
  */
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
+const ROW_ID = 1;
 
 export const DEFAULT_SETTINGS: StoreSettings = {
   storeName: SITE.name,
@@ -28,12 +23,53 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   updated_at: new Date(0).toISOString(),
 };
 
+/** La tabla usa snake_case; el resto de la app, camelCase. */
+interface Row {
+  store_name: string;
+  tagline: string;
+  whatsapp_number: string;
+  whatsapp_display: string;
+  meeting_point_note: string;
+  support_hours: string;
+  announcement: string;
+  announcement_active: boolean;
+  low_stock_threshold: number;
+  updated_at: string;
+}
+
+function fromRow(row: Row): StoreSettings {
+  return {
+    storeName: row.store_name || DEFAULT_SETTINGS.storeName,
+    tagline: row.tagline || DEFAULT_SETTINGS.tagline,
+    whatsappNumber: row.whatsapp_number || DEFAULT_SETTINGS.whatsappNumber,
+    whatsappDisplay: row.whatsapp_display || DEFAULT_SETTINGS.whatsappDisplay,
+    meetingPointNote:
+      row.meeting_point_note || DEFAULT_SETTINGS.meetingPointNote,
+    supportHours: row.support_hours || DEFAULT_SETTINGS.supportHours,
+    announcement: row.announcement,
+    announcementActive: row.announcement_active,
+    lowStockThreshold: row.low_stock_threshold,
+    updated_at: row.updated_at,
+  };
+}
+
+const SELECT =
+  "store_name,tagline,whatsapp_number,whatsapp_display,meeting_point_note,support_hours,announcement,announcement_active,low_stock_threshold,updated_at";
+
+/**
+ * Nunca revienta: si la base no responde, la tienda sigue de pie con los
+ * valores por defecto. Son textos de presentación, no datos críticos.
+ */
 export async function getSettings(): Promise<StoreSettings> {
   try {
-    const raw = await fs.readFile(SETTINGS_FILE, "utf8");
-    const parsed = JSON.parse(raw) as Partial<StoreSettings>;
-    // Merge: si se agrega un ajuste nuevo, los guardados no se rompen.
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    const db = await publicDb();
+    const { data } = await db
+      .from("store_settings")
+      .select(SELECT)
+      .eq("id", ROW_ID)
+      .maybeSingle();
+
+    return data ? fromRow(data as Row) : DEFAULT_SETTINGS;
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -42,15 +78,36 @@ export async function getSettings(): Promise<StoreSettings> {
 export async function saveSettings(
   input: Partial<StoreSettings>,
 ): Promise<StoreSettings> {
-  const current = await getSettings();
-  const next: StoreSettings = {
-    ...current,
-    ...input,
-    updated_at: new Date().toISOString(),
-  };
+  const db = adminDb();
 
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(SETTINGS_FILE, JSON.stringify(next, null, 2), "utf8");
+  const payload: Partial<Row> = { updated_at: new Date().toISOString() };
 
-  return next;
+  if (input.storeName !== undefined) payload.store_name = input.storeName;
+  if (input.tagline !== undefined) payload.tagline = input.tagline;
+  if (input.whatsappNumber !== undefined)
+    payload.whatsapp_number = input.whatsappNumber;
+  if (input.whatsappDisplay !== undefined)
+    payload.whatsapp_display = input.whatsappDisplay;
+  if (input.meetingPointNote !== undefined)
+    payload.meeting_point_note = input.meetingPointNote;
+  if (input.supportHours !== undefined)
+    payload.support_hours = input.supportHours;
+  if (input.announcement !== undefined) payload.announcement = input.announcement;
+  if (input.announcementActive !== undefined)
+    payload.announcement_active = input.announcementActive;
+  if (input.lowStockThreshold !== undefined)
+    payload.low_stock_threshold = input.lowStockThreshold;
+
+  const { data, error } = await db
+    .from("store_settings")
+    .update(payload)
+    .eq("id", ROW_ID)
+    .select(SELECT)
+    .single();
+
+  if (error || !data) {
+    throw new Error(`No se pudieron guardar los ajustes: ${error?.message}`);
+  }
+
+  return fromRow(data as Row);
 }

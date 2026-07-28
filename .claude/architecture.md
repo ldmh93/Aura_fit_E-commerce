@@ -60,6 +60,7 @@ src/
 │       └── components/         # AdminShell, AdminUI, formularios, charts
 │
 ├── services/                   # Capa de datos — única puerta
+│   ├── db.ts                   # publicDb() y adminDb()
 │   ├── products.service.ts     # Lectura + mutaciones de catálogo
 │   ├── categories.service.ts
 │   ├── inventory.service.ts
@@ -69,10 +70,9 @@ src/
 │
 ├── lib/
 │   ├── config.ts               # Marca, WhatsApp, entrega, tallas, colores
-│   ├── mock-data.ts            # Catálogo actual (pre-Supabase)
 │   ├── analytics.ts
 │   ├── env.ts
-│   └── supabase/               # Clientes listos para la siguiente fase
+│   └── supabase/               # Clientes de navegador, servidor y admin
 │
 ├── hooks/
 ├── types/                      # Tipos de dominio compartidos
@@ -82,29 +82,42 @@ src/
 ## Flujo de datos
 
 ```
-Server Component  →  services/*.service.ts  →  mock-data / settings.json
+Server Component  →  services/*.service.ts  →  Supabase
                                     ↑
 Client Component  →  Server Action  ┘
 ```
 
 **Regla dura:** ningún componente lee datos directamente. Todo pasa por
-`src/services`. Por eso conectar Supabase solo tocará esos seis archivos.
+`src/services`. Gracias a eso, conectar Supabase solo tocó esos archivos.
 
-## Estado de los datos
+## Los dos permisos de Supabase
 
-| Dato               | Hoy                     | Después              |
-| ------------------ | ----------------------- | -------------------- |
-| Productos          | `lib/mock-data.ts`      | tabla `products`     |
-| Categorías         | `lib/mock-data.ts`      | tabla `categories`   |
-| Inventario         | `lib/mock-data.ts`      | tabla `inventory`    |
-| Pedidos            | `lib/mock-data.ts`      | tabla `orders`       |
-| Cupones            | `lib/mock-data.ts`      | tabla `coupons`      |
-| Ajustes            | `.data/settings.json`   | `store_settings`     |
-| Fotos              | URLs externas           | Supabase Storage     |
+`src/services/db.ts` expone dos clientes y la diferencia importa:
 
-Las mutaciones en memoria duran mientras viva el proceso del servidor: en
-desarrollo se reinician con cada recarga completa. Es lo esperado hasta
-conectar Supabase.
+| Cliente      | Llave      | RLS      | Para qué                                   |
+| ------------ | ---------- | -------- | ------------------------------------------ |
+| `publicDb()` | publishable| Se aplica| Toda la tienda y la validación de cupones  |
+| `adminDb()`  | secret     | Se omite | Panel `/admin` y registro de pedidos       |
+
+`publicDb()` usa cookies para leer la sesión. Cuando se llama fuera de una
+petición —`generateStaticParams`, `sitemap.ts`— cae a un cliente sin cookies:
+ahí no hay sesión que leer y lo que se prerenderiza es contenido público.
+
+`adminDb()` se usa en el panel por dos razones: necesita ver los productos
+ocultos (que RLS esconde) y registra los pedidos de clientes anónimos.
+Vive solo en el servidor y nunca llega al navegador.
+
+## Dónde vive cada dato
+
+| Dato        | Tabla / lugar                    |
+| ----------- | -------------------------------- |
+| Productos   | `products`                       |
+| Categorías  | `categories`                     |
+| Inventario  | `inventory` (+ trigger de stock) |
+| Pedidos     | `orders`                         |
+| Cupones     | `coupons`                        |
+| Ajustes     | `store_settings` (una sola fila) |
+| Fotos       | Storage, bucket `productos`      |
 
 ## Rendimiento
 

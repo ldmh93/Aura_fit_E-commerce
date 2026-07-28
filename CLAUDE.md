@@ -58,7 +58,7 @@ WhatsApp: **417 127 9042** (`524171279042` en formato internacional).
 Next.js 15 (App Router) · React 19 · TypeScript estricto · Tailwind CSS v4 ·
 Framer Motion · Zustand · Recharts · lucide-react · clsx
 
-Destino (aún no conectado): Supabase (PostgreSQL + Auth + Storage) · Vercel
+Supabase (PostgreSQL + Auth + Storage) · Vercel (pendiente de deploy)
 
 ```bash
 npm run dev        # http://localhost:3000
@@ -80,7 +80,7 @@ src/
 ├── components/      layout · ui · shared · analytics
 ├── features/        products · cart · admin
 ├── services/        ÚNICA puerta a los datos
-├── lib/             config.ts · mock-data.ts · analytics · env · supabase/
+├── lib/             config.ts · analytics · env · supabase/
 ├── types/           Tipos de dominio
 └── utils/           formatPrice · slugify · sanitize · cn
 ```
@@ -88,13 +88,14 @@ src/
 **Flujo de datos**
 
 ```
-Server Component  →  services/*.service.ts  →  mock-data / settings.json
+Server Component  →  services/*.service.ts  →  Supabase
                                   ↑
 Client Component  →  Server Action ┘
 ```
 
 **Regla dura:** ningún componente lee datos directamente. Todo pasa por
-`src/services`. Por eso conectar Supabase solo tocará esos seis archivos.
+`src/services`. `db.ts` expone `publicDb()` (llave pública, respeta RLS) y
+`adminDb()` (llave secreta, omite RLS — solo panel y registro de pedidos).
 
 ---
 
@@ -114,12 +115,14 @@ Client Component  →  Server Action ┘
 
 ## Estado general
 
-**Interfaz y estructura: terminadas.** Build limpio, typecheck limpio,
-24 rutas responden 200.
+**Interfaz terminada y Supabase conectado.** Build y typecheck limpios.
 
-Los datos viven en `src/lib/mock-data.ts` y los ajustes en
-`.data/settings.json`. **Supabase todavía no está conectado** — es la
-siguiente fase, y así lo pidió el cliente.
+Los datos salen de Supabase (proyecto `npbzjnbsxsvwqvjjwjwh`): 6 tablas,
+trigger de stock, RLS activo y bucket `productos` para las fotos.
+Catálogo cargado: 2 categorías, 9 productos, 115 variantes, 2 cupones.
+
+**`/admin` ya exige sesión.** Falta crear el usuario administrador en
+Supabase Auth; hasta entonces el panel redirige a `/admin/login`.
 
 Publicado en GitHub: `ldmh93/Aura_fit_E-commerce` (repositorio **público**).
 No hay nada desplegado en Vercel.
@@ -137,37 +140,38 @@ No hay nada desplegado en Vercel.
 - Barra de compra fija en móvil; admin con tarjetas en lugar de tablas anchas
 - Panel admin, 8 pantallas: dashboard, estadísticas, productos, categorías,
   inventario, pedidos, cupones, ajustes
-- Subidor de fotos a Supabase Storage (listo, requiere credenciales)
+- Subidor de fotos a Supabase Storage
 - SEO: metadata dinámica, Open Graph, JSON-LD, sitemap, robots
 - Meta Pixel y GA4 (se activan solo si hay ID)
-- Migraciones SQL destino + seed
 - Simplificación para catálogo pequeño y eliminación total de envíos
+- Talla Unitalla y paleta de 24 colores agrupada
+- **Supabase conectado:** esquema, RLS, Storage y los 6 servicios migrados
 
 ## Tareas pendientes
 
 Lista viva y priorizada en **`TASKS.md`**. Resumen:
 
-1. Conectar Supabase (BD, Auth, Storage) ← siguiente
-2. Proteger `/admin` con autenticación real
-3. Mover ajustes de `.data/settings.json` a la tabla `store_settings`
-4. Cargar catálogo y fotografía reales
-5. Deploy en Vercel
+1. Crear el usuario administrador en Supabase Auth ← siguiente
+2. Cargar catálogo y fotografía reales
+3. Deploy en Vercel
+4. Rotar la llave secreta (se compartió por chat durante la configuración)
 
 ---
 
 ## Última tarea realizada
 
-**2026-07-25 — Simplificar la tienda para un catálogo pequeño**
+**2026-07-25 — Conectar Supabase**
 
-Adaptación al negocio real. Se eliminó todo lo relacionado con envíos y se
-sustituyó por punto de encuentro. Taxonomía reducida a Hombre/Mujer.
-Home simplificada. Panel admin ampliado de 5 a 8 pantallas.
-Publicado en GitHub en las ramas `main` y `diseno-v1-premium`.
+Esquema ejecutado (6 tablas, trigger de stock, RLS, bucket `productos`).
+Los seis servicios ahora leen y escriben en Supabase; se eliminó
+`mock-data.ts`. Catálogo cargado: 9 productos con fotos y 115 variantes.
+Corregido en el camino: el trigger necesitaba `::product_status` explícito,
+y `publicDb()` cae a un cliente sin cookies fuera de una petición.
 
 ## Próximo objetivo
 
-**Conectar Supabase.** Crear proyecto, ejecutar las dos migraciones y
-reescribir el interior de los seis servicios. La interfaz no debe cambiar.
+**Crear el usuario administrador.** El middleware ya bloquea `/admin`; sin
+usuario en Supabase Auth no se puede entrar al panel.
 
 ---
 
@@ -176,7 +180,7 @@ reescribir el interior de los seis servicios. La interfaz no debe cambiar.
 | Archivo | Para qué |
 | --- | --- |
 | `src/lib/config.ts` | Marca, WhatsApp, entrega, tallas, colores, navegación |
-| `src/lib/mock-data.ts` | Catálogo, inventario, pedidos y cupones actuales |
+| `src/services/db.ts` | Clientes de Supabase: publicDb() y adminDb() |
 | `src/types/index.ts` | Todos los tipos de dominio |
 | `src/services/products.service.ts` | Lectura y mutaciones de catálogo |
 | `src/services/orders.service.ts` | Pedidos y estadísticas del dashboard |
@@ -203,7 +207,7 @@ reescribir el interior de los seis servicios. La interfaz no debe cambiar.
 | Recharts con `next/dynamic` | Dashboard bajó de 105 kB a 1.4 kB; la tienda no lo incluye |
 | `products.stock` es derivado | Se calcula del inventario; nunca se escribe desde el formulario |
 | Servicios sin Supabase por ahora | El cliente pidió terminar interfaz primero; evita código a medias |
-| Ajustes en `.data/settings.json` | Solución temporal hasta la tabla `store_settings` |
+| Fotos con URL de Unsplash | Datos de muestra hasta tener fotografía propia |
 | Grupo de rutas `(store)` | Separa el chrome de la tienda del layout del panel |
 | Rama `diseno-v1-premium` | Conserva el primer diseño como alternativa |
 

@@ -251,6 +251,7 @@ puede entrar al panel, ni en local ni en producción.
 
 | Problema | Impacto | Solución |
 | --- | --- | --- |
+| `products` se vació dos veces sin causa identificada | **Alto** | Migración 0004 registra los borrados; activar respaldos |
 | Sin usuario administrador | **Alto** — el panel es inaccesible | Crearlo en Supabase Auth |
 | Llave secreta compartida por chat | Medio | Rotarla en Settings → API Keys |
 | Ajustes en archivo local | No funciona en Vercel (FS de solo lectura) | Tabla `store_settings` |

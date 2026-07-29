@@ -11,6 +11,24 @@
 
 ## 🔜 Siguiente tarea
 
+### 0. Instalar el registro de borrados
+
+La tabla `products` se vació dos veces durante el desarrollo sin dejar
+rastro. Esto no lo impide, pero graba la consulta exacta, el rol y la hora
+para que una tercera vez sea diagnosticable.
+
+- [ ] Ejecutar `supabase/EJECUTAR-AHORA-0004.sql` en el SQL Editor
+- [ ] Activar respaldos en Supabase → Database → Backups antes de cargar
+      el catálogo real
+
+Para consultarlo si vuelve a pasar:
+
+```sql
+select ocurrio_en, tabla, rol, consulta
+from public.audit_borrados
+order by ocurrio_en desc limit 50;
+```
+
 ### 1. Cargar el catálogo real
 
 Los 9 productos actuales son de muestra, con fotos de Unsplash.

@@ -11,21 +11,24 @@
 
 ## 🔜 Siguiente tarea
 
-### 0. Permitir la URL de recuperación de contraseña
+### 1. Cargar el catálogo real
 
-En **Supabase → Authentication → URL Configuration**, agregar a las
-redirecciones permitidas:
+Los 9 productos actuales son de muestra, con fotos de Unsplash.
 
-```
-https://aura-fit-store.vercel.app/auth/confirmar
-```
+- [ ] Subir la fotografía propia desde `/admin/productos` (bucket `productos`)
+- [ ] Sustituir los productos de muestra por los reales
+- [ ] Ajustar existencias en `/admin/inventario`
+- [ ] Revisar los textos de Hombre y Mujer en `/admin/categorias`
 
-- [ ] Agregada
-- [ ] Probado: pedir el enlace desde `/admin/recuperar` y cambiar la clave
+### 2. Higiene de credenciales
 
-Sin esto, el correo llega pero el enlace no abre sesión.
+Las dos se compartieron por chat durante la configuración.
 
-### 1. Crear el usuario administrador
+- [ ] Cambiar la contraseña del administrador
+- [ ] Rotar la llave secreta en Settings → API Keys
+- [ ] Actualizar `.env.local` y la variable en Vercel
+
+### 3. Antiguo — crear el usuario administrador
 
 El middleware ya bloquea `/admin` y redirige a `/admin/login`. Falta el
 usuario en Supabase Auth para poder entrar.

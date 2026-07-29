@@ -2,8 +2,13 @@ import Link from "next/link";
 import { Clock, MapPin, MessageCircle } from "lucide-react";
 import { LogoMark } from "@/components/shared/Logo";
 import { generalWhatsappUrl } from "@/features/cart/whatsapp";
-import { BUSINESS, DELIVERY, SITE, WHATSAPP } from "@/lib/config";
+import { BUSINESS, DELIVERY, DEVELOPER, SITE, WHATSAPP } from "@/lib/config";
 import { getCategories } from "@/services/categories.service";
+
+/** Contacto directo del desarrollador, con el asunto ya escrito. */
+const developerWhatsapp = `https://wa.me/${DEVELOPER.phone}?text=${encodeURIComponent(
+  "Hola, vi tu trabajo en AURA FIT y me interesa una página web.",
+)}`;
 
 const help = [
   { href: "/como-comprar", label: "Cómo comprar" },
@@ -115,6 +120,32 @@ export async function Footer() {
         </div>
 
         <div className="hairline my-10" />
+
+        {/* Crédito de desarrollo */}
+        <div className="mb-8 text-center">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-mist/60">
+            Desarrollo y diseño
+          </p>
+          <a
+            href={developerWhatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group mt-2 inline-flex flex-col items-center gap-1"
+          >
+            <span className="text-sm font-medium text-silver transition-colors group-hover:text-aura">
+              {DEVELOPER.name}
+            </span>
+            <span className="text-xs text-mist transition-colors group-hover:text-silver">
+              {DEVELOPER.services}
+            </span>
+            <span className="tabular mt-1 inline-flex items-center gap-1.5 text-xs text-mist transition-colors group-hover:text-aura">
+              <MessageCircle className="h-3 w-3" aria-hidden />
+              {DEVELOPER.phoneDisplay}
+            </span>
+          </a>
+        </div>
+
+        <div className="hairline mb-8" />
 
         <div className="flex flex-col gap-4 text-xs text-mist md:flex-row md:items-center md:justify-between">
           <p>

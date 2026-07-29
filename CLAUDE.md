@@ -58,7 +58,7 @@ WhatsApp: **417 127 9042** (`524171279042` en formato internacional).
 Next.js 15 (App Router) · React 19 · TypeScript estricto · Tailwind CSS v4 ·
 Framer Motion · Zustand · Recharts · lucide-react · clsx
 
-Supabase (PostgreSQL + Auth + Storage) · Vercel (pendiente de deploy)
+Supabase (PostgreSQL + Auth + Storage) · Vercel
 
 ```bash
 npm run dev        # http://localhost:3000
@@ -121,13 +121,13 @@ Client Component  →  Server Action ┘
 
 Los datos salen de Supabase (proyecto `npbzjnbsxsvwqvjjwjwh`): 6 tablas,
 trigger de stock, RLS activo y bucket `productos` para las fotos.
-Catálogo cargado: 2 categorías, 9 productos, 115 variantes, 2 cupones.
+El catálogo de muestra ya se retiró: se está cargando el real desde el panel.
 
 **En línea:** <https://aura-fit-store.vercel.app> (proyecto Vercel
 `luigis/aura-fit-store`, conectado al repositorio de GitHub).
 
-**`/admin` ya exige sesión.** Falta crear el usuario administrador en
-Supabase Auth; hasta entonces el panel redirige a `/admin/login`.
+**`/admin` exige sesión** y el usuario administrador ya existe.
+La recuperación de contraseña está verificada de extremo a extremo.
 
 Repositorio: `ldmh93/Aura_fit_E-commerce` (**público**).
 
@@ -155,10 +155,9 @@ Repositorio: `ldmh93/Aura_fit_E-commerce` (**público**).
 
 Lista viva y priorizada en **`TASKS.md`**. Resumen:
 
-1. Crear el usuario administrador en Supabase Auth ← siguiente
-2. Rotar la llave secreta (se compartió por chat durante la configuración)
-3. Cargar catálogo y fotografía reales
-4. Dominio propio
+1. Terminar de cargar el catálogo real ← en curso
+2. Rotar la llave secreta y la contraseña (se compartieron por chat)
+3. Dominio propio
 
 ---
 
@@ -206,7 +205,7 @@ Next.js 15.5.4 — se actualizó a 15.5.22. También se generó un favicon de
 
 ## Próximo objetivo
 
-**Crear el usuario administrador.** Sin usuario en Supabase Auth no se
+**Acompañar la carga del catálogo real.** Sin usuario en Supabase Auth no se
 puede entrar al panel, ni en local ni en producción.
 
 ---
@@ -253,12 +252,12 @@ puede entrar al panel, ni en local ni en producción.
 
 | Problema | Impacto | Solución |
 | --- | --- | --- |
-| `products` se vació dos veces sin causa identificada | **Alto** | Migración 0004 registra los borrados; activar respaldos |
+
 | Sin usuario administrador | **Alto** — el panel es inaccesible | Crearlo en Supabase Auth |
 | Llave secreta compartida por chat | Medio | Rotarla en Settings → API Keys |
 | Ajustes en archivo local | No funciona en Vercel (FS de solo lectura) | Tabla `store_settings` |
 | Mutaciones en memoria | Se pierden al reiniciar el servidor | Supabase |
-| Fotos de Unsplash | No son prendas AURA FIT | Fotografía real en Storage |
+| Catálogo en construcción | Se está cargando el catálogo real | En proceso |
 | Favicon de 1.5 MB | Peso innecesario | Exportar `.ico` o PNG 64px |
 | Repositorio público | WhatsApp y datos visibles | Decisión del cliente |
 

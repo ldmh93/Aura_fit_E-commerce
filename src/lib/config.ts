@@ -33,6 +33,14 @@ export const WHATSAPP = {
   greeting: "Hola AURA FIT 👋",
 } as const;
 
+/** Crédito de quien construyó el sitio, al pie de página. */
+export const DEVELOPER = {
+  name: "Luis David Maldonado Hernández",
+  services: "Desarrollo web, aplicaciones, diseño y branding",
+  phone: "524171279042",
+  phoneDisplay: "417 127 9042",
+} as const;
+
 /**
  * No hay envíos a domicilio ni paqueterías.
  * La entrega se acuerda por WhatsApp en un punto de encuentro.

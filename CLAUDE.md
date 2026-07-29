@@ -64,6 +64,8 @@ Supabase (PostgreSQL + Auth + Storage) · Vercel (pendiente de deploy)
 npm run dev        # http://localhost:3000
 npm run build
 npm run typecheck  # tsc --noEmit
+npm run respaldo   # copia del catálogo en /respaldos
+npm run restaurar  # recupera desde la copia más reciente
 ```
 
 ---

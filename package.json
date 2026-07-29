@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "respaldo": "node scripts/respaldo.mjs",
+    "restaurar": "node scripts/restaurar.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

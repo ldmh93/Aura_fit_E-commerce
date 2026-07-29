@@ -13,13 +13,11 @@
 
 ### 0. Instalar el registro de borrados
 
-La tabla `products` se vació dos veces durante el desarrollo sin dejar
+La tabla `products` se vació **tres veces** durante el desarrollo sin dejar
 rastro. Esto no lo impide, pero graba la consulta exacta, el rol y la hora
-para que una tercera vez sea diagnosticable.
+para que la próxima sea diagnosticable.
 
 - [ ] Ejecutar `supabase/EJECUTAR-AHORA-0004.sql` en el SQL Editor
-- [ ] Activar respaldos en Supabase → Database → Backups antes de cargar
-      el catálogo real
 
 Para consultarlo si vuelve a pasar:
 
@@ -28,6 +26,22 @@ select ocurrio_en, tabla, rol, consulta
 from public.audit_borrados
 order by ocurrio_en desc limit 50;
 ```
+
+### 0b. Respaldos — ya resueltos
+
+El plan gratuito de Supabase no hace respaldos automáticos, así que se
+resuelve desde el proyecto:
+
+```bash
+npm run respaldo          # guarda una copia en /respaldos
+npm run respaldo -- --ver # lista las copias existentes
+npm run restaurar         # recupera desde la más reciente
+```
+
+Conserva las últimas 20 copias y la carpeta no se sube al repositorio.
+Probado: borrando un producto y recuperándolo con su inventario.
+
+**Hacer un respaldo antes y después de cargar el catálogo real.**
 
 ### 1. Cargar el catálogo real
 

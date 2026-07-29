@@ -1,13 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { GripVertical, ImagePlus, Loader2, Trash2 } from "lucide-react";
-import { uploadProductImagesAction } from "@/features/admin/upload.actions";
+import { createSignedUploadAction } from "@/features/admin/upload.actions";
+import { resizeImage } from "@/features/admin/image-resize";
 import { cn } from "@/utils";
 
 /**
  * Subida de fotos de producto.
+ *
+ * Cada archivo se reduce en el navegador y sube directo a Supabase Storage
+ * con una URL firmada. No pasa por el servidor, así que no le aplican los
+ * topes de tamaño de Next ni de Vercel: por eso ahora funcionan las fotos
+ * tomadas con el celular.
+ *
  * El orden de la lista es el orden de la galería:
  * 1) frontal · 2) trasera · 3) detalle de tela · 4) con modelo
  */
@@ -24,41 +31,78 @@ export function ImageUploader({
   const [error, setError] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState("");
   const [dragOver, setDragOver] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function upload(files: FileList | null) {
+  async function subir(files: FileList | null) {
     if (!files?.length) return;
+
     setError(null);
+    const lista = Array.from(files);
+    setProgress({ done: 0, total: lista.length });
 
-    const formData = new FormData();
-    formData.set("folder", folder || "productos");
-    Array.from(files).forEach((file) => formData.append("files", file));
+    const nuevas: string[] = [];
 
-    startTransition(async () => {
-      const result = await uploadProductImagesAction(formData);
-      if (result.urls.length) setUrls((prev) => [...prev, ...result.urls]);
-      if (!result.ok) setError(result.error ?? "No se pudieron subir las fotos.");
-    });
+    for (let i = 0; i < lista.length; i += 1) {
+      const file = lista[i]!;
+
+      try {
+        if (!file.type.startsWith("image/") && !/\.(hei[cf])$/i.test(file.name)) {
+          throw new Error(`“${file.name}” no es una imagen.`);
+        }
+
+        const { blob, fileName } = await resizeImage(file);
+
+        const signed = await createSignedUploadAction(fileName, folder);
+        if (!signed.ok || !signed.signedUrl || !signed.publicUrl) {
+          throw new Error(signed.error ?? "No se pudo preparar la subida.");
+        }
+
+        const res = await fetch(signed.signedUrl, {
+          method: "PUT",
+          body: blob,
+          headers: { "Content-Type": blob.type },
+        });
+
+        if (!res.ok) {
+          throw new Error(`Falló la subida de “${file.name}”.`);
+        }
+
+        nuevas.push(signed.publicUrl);
+      } catch (e) {
+        setError(
+          e instanceof Error ? e.message : `No se pudo subir “${file.name}”.`,
+        );
+      }
+
+      setProgress({ done: i + 1, total: lista.length });
+    }
+
+    if (nuevas.length) setUrls((prev) => [...prev, ...nuevas]);
+    setProgress(null);
   }
 
-  function remove(index: number) {
+  function quitar(index: number) {
     setUrls((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function move(index: number, direction: -1 | 1) {
+  function mover(index: number, direccion: -1 | 1) {
     setUrls((prev) => {
       const next = [...prev];
-      const target = index + direction;
-      if (target < 0 || target >= next.length) return prev;
-      [next[index], next[target]] = [next[target]!, next[index]!];
+      const destino = index + direccion;
+      if (destino < 0 || destino >= next.length) return prev;
+      [next[index], next[destino]] = [next[destino]!, next[index]!];
       return next;
     });
   }
 
+  const subiendo = progress !== null;
+
   return (
     <div className="space-y-4">
-      {/* El formulario sigue enviando una URL por línea */}
+      {/* El formulario envía una URL por línea */}
       <input type="hidden" name={name} value={urls.join("\n")} />
 
       <div
@@ -70,29 +114,32 @@ export function ImageUploader({
         onDrop={(e) => {
           e.preventDefault();
           setDragOver(false);
-          upload(e.dataTransfer.files);
+          subir(e.dataTransfer.files);
         }}
         className={cn(
-          "rounded-2xl border border-dashed p-6 text-center transition-colors",
+          "rounded-2xl border border-dashed px-4 py-6 text-center transition-colors sm:px-6",
           dragOver ? "border-aura bg-aura/5" : "border-white/15",
         )}
       >
         <ImagePlus className="mx-auto h-6 w-6 text-mist" aria-hidden />
         <p className="mt-3 text-sm text-white">
-          Arrastra las fotos aquí o selecciónalas
+          Toca para elegir fotos o arrástralas aquí
         </p>
-        <p className="mt-1 text-xs text-mist">
-          JPG, PNG, WebP o AVIF · máximo 5 MB por imagen
+        <p className="mt-1 text-xs leading-relaxed text-mist">
+          Desde el celular puedes usar la cámara o la galería. Se reducen
+          solas antes de subir.
         </p>
 
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/avif"
+          // `image/*` a secas: así el iPhone ofrece la galería completa y no
+          // deja fuera las fotos en HEIC.
+          accept="image/*"
           multiple
           className="sr-only"
           onChange={(e) => {
-            upload(e.target.files);
+            subir(e.target.files);
             e.target.value = "";
           }}
         />
@@ -100,13 +147,13 @@ export function ImageUploader({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          disabled={pending}
-          className="mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-5 text-xs uppercase tracking-[0.14em] text-white transition-colors hover:border-aura hover:text-aura disabled:opacity-50"
+          disabled={subiendo}
+          className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-white/15 px-5 text-xs uppercase tracking-[0.14em] text-white transition-colors hover:border-aura hover:text-aura disabled:opacity-50 sm:w-auto"
         >
-          {pending ? (
+          {subiendo ? (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              Subiendo…
+              Subiendo {progress.done} de {progress.total}…
             </>
           ) : (
             "Seleccionar fotos"
@@ -120,8 +167,8 @@ export function ImageUploader({
         </p>
       ) : null}
 
-      {/* Alternativa sin Storage: pegar una URL ya alojada */}
-      <div className="flex gap-2">
+      {/* Alternativa: pegar una URL ya alojada */}
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           type="url"
           value={urlInput}
@@ -137,7 +184,7 @@ export function ImageUploader({
             setUrls((prev) => [...prev, urlInput.trim()]);
             setUrlInput("");
           }}
-          className="shrink-0 rounded-xl border border-white/12 px-4 text-xs uppercase tracking-[0.12em] text-mist transition-colors hover:border-aura hover:text-aura disabled:opacity-40"
+          className="h-11 shrink-0 rounded-xl border border-white/12 px-4 text-xs uppercase tracking-[0.12em] text-mist transition-colors hover:border-aura hover:text-aura disabled:opacity-40 sm:h-auto"
         >
           Agregar
         </button>
@@ -145,15 +192,15 @@ export function ImageUploader({
 
       {urls.length ? (
         <>
-          <p className="text-xs text-mist">
-            El orden es el de la galería: 1) frontal · 2) trasera · 3) detalle de
-            tela · 4) con modelo.
+          <p className="text-xs leading-relaxed text-mist">
+            El orden es el de la galería: 1) frontal · 2) trasera · 3) detalle
+            de tela · 4) con modelo.
           </p>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {urls.map((url, index) => (
               <li
                 key={`${url}-${index}`}
-                className="group relative overflow-hidden rounded-xl border border-white/10 bg-steel"
+                className="relative overflow-hidden rounded-xl border border-white/10 bg-steel"
               >
                 <div className="relative aspect-4/5">
                   <Image
@@ -169,27 +216,24 @@ export function ImageUploader({
                   {index + 1}
                 </span>
 
-                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-void/85 px-2 py-1.5 backdrop-blur-sm">
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-void/85 px-2 py-2 backdrop-blur-sm">
                   <div className="flex items-center gap-0.5">
                     <button
                       type="button"
-                      onClick={() => move(index, -1)}
+                      onClick={() => mover(index, -1)}
                       disabled={index === 0}
                       aria-label="Mover a la izquierda"
-                      className="px-1 text-mist transition-colors hover:text-white disabled:opacity-25"
+                      className="flex h-8 w-8 items-center justify-center text-mist transition-colors hover:text-white disabled:opacity-25"
                     >
                       ‹
                     </button>
-                    <GripVertical
-                      className="h-3 w-3 text-mist/50"
-                      aria-hidden
-                    />
+                    <GripVertical className="h-3 w-3 text-mist/50" aria-hidden />
                     <button
                       type="button"
-                      onClick={() => move(index, 1)}
+                      onClick={() => mover(index, 1)}
                       disabled={index === urls.length - 1}
                       aria-label="Mover a la derecha"
-                      className="px-1 text-mist transition-colors hover:text-white disabled:opacity-25"
+                      className="flex h-8 w-8 items-center justify-center text-mist transition-colors hover:text-white disabled:opacity-25"
                     >
                       ›
                     </button>
@@ -197,9 +241,9 @@ export function ImageUploader({
 
                   <button
                     type="button"
-                    onClick={() => remove(index)}
+                    onClick={() => quitar(index)}
                     aria-label={`Quitar foto ${index + 1}`}
-                    className="text-mist transition-colors hover:text-danger"
+                    className="flex h-8 w-8 items-center justify-center text-mist transition-colors hover:text-danger"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

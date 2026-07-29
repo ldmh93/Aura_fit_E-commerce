@@ -103,7 +103,28 @@ export default async function AdminStatsPage() {
           {stats.topProducts.length === 0 ? (
             <EmptyState message="Todavía no hay ventas registradas." />
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Móvil: lista con barra en lugar de tabla */}
+            <ul className="space-y-4 p-5 md:hidden">
+              {stats.topProducts.map((product) => (
+                <li key={product.name}>
+                  <div className="mb-2 flex items-baseline justify-between gap-3">
+                    <span className="truncate text-sm text-white">
+                      {product.name}
+                    </span>
+                    <span className="tabular shrink-0 text-xs text-silver">
+                      {formatAmount(product.revenue)}
+                    </span>
+                  </div>
+                  <MiniBar value={product.units} max={maxUnits} />
+                  <p className="tabular mt-1 text-xs text-mist">
+                    {product.units} piezas
+                  </p>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-lg">
                 <thead className="border-b border-white/8">
                   <tr>
@@ -129,12 +150,13 @@ export default async function AdminStatsPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Panel>
       </div>
 
       <Panel title="Pedidos por estado" className="mt-4">
-        <ul className="grid gap-px bg-white/6 sm:grid-cols-3 lg:grid-cols-5">
+        <ul className="grid grid-cols-2 gap-px bg-white/6 sm:grid-cols-3 lg:grid-cols-5">
           {stats.ordersByStatus.map((row) => (
             <li key={row.status} className="bg-graphite px-5 py-4">
               <p className="text-[10px] uppercase tracking-[0.16em] text-mist">

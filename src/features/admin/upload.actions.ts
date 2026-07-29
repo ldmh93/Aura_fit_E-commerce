@@ -6,88 +6,69 @@ import { isAdmin } from "./guard";
 import { slugify } from "@/utils";
 
 /**
- * Subida de fotografía de producto a Supabase Storage.
- * Requiere el bucket `productos` (ver supabase/migrations/0002_storage.sql).
+ * Subida de fotografía de producto.
+ *
+ * El archivo NO pasa por el servidor: se pide una URL firmada y el navegador
+ * sube directo a Supabase Storage. Antes se enviaba como Server Action y
+ * fallaba con cualquier foto de celular, porque se acumulaban tres topes:
+ * el de las Server Actions de Next (1 MB), el de las funciones de Vercel
+ * (4.5 MB) y el del bucket. Yendo directo no aplica ninguno de los dos
+ * primeros.
  */
 
 const PRODUCT_BUCKET = "productos";
-const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 
-export interface UploadResult {
+export interface SignedUpload {
   ok: boolean;
-  urls: string[];
+  /** Destino temporal al que el navegador sube el archivo. */
+  signedUrl?: string;
+  /** URL definitiva y pública de la imagen. */
+  publicUrl?: string;
   error?: string;
 }
 
-export async function uploadProductImagesAction(
-  formData: FormData,
-): Promise<UploadResult> {
-  // Sin esto, cualquiera podría llenar el bucket de archivos ajenos.
+export async function createSignedUploadAction(
+  fileName: string,
+  folder: string,
+): Promise<SignedUpload> {
+  // Sin esto, cualquiera podría llenar el bucket con archivos ajenos.
   if (!(await isAdmin())) {
     return {
       ok: false,
-      urls: [],
       error: "Tu sesión expiró. Vuelve a iniciar sesión para subir fotos.",
     };
   }
 
   const supabase = createAdminClient();
-
   if (!supabase || !hasServiceRole) {
-    return {
-      ok: false,
-      urls: [],
-      error:
-        "Falta configurar Supabase. Llena NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY en .env.local para poder subir fotos.",
-    };
+    return { ok: false, error: "Supabase no está configurado." };
   }
 
-  const files = formData.getAll("files").filter((f): f is File => f instanceof File);
-  const folder = slugify(String(formData.get("folder") ?? "")) || "sin-clasificar";
+  const extension = (fileName.split(".").pop() ?? "webp")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 5);
 
-  if (!files.length) {
-    return { ok: false, urls: [], error: "No seleccionaste ninguna imagen." };
+  const safeFolder = slugify(folder) || "sin-clasificar";
+  const path = `${safeFolder}/${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}.${extension || "webp"}`;
+
+  const { data, error } = await supabase.storage
+    .from(PRODUCT_BUCKET)
+    .createSignedUploadUrl(path);
+
+  if (error || !data) {
+    return { ok: false, error: `No se pudo preparar la subida: ${error?.message}` };
   }
 
-  const urls: string[] = [];
+  const { data: publicData } = supabase.storage
+    .from(PRODUCT_BUCKET)
+    .getPublicUrl(path);
 
-  for (const file of files) {
-    if (!ALLOWED.includes(file.type)) {
-      return {
-        ok: false,
-        urls,
-        error: `"${file.name}" no es un formato válido. Usa JPG, PNG, WebP o AVIF.`,
-      };
-    }
-    if (file.size > MAX_BYTES) {
-      return {
-        ok: false,
-        urls,
-        error: `"${file.name}" pesa más de 5 MB. Comprime la imagen antes de subirla.`,
-      };
-    }
-
-    const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-    const path = `${folder}/${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2, 8)}.${extension}`;
-
-    const { error } = await supabase.storage
-      .from(PRODUCT_BUCKET)
-      .upload(path, file, { contentType: file.type, upsert: false });
-
-    if (error) {
-      return {
-        ok: false,
-        urls,
-        error: `No se pudo subir "${file.name}": ${error.message}`,
-      };
-    }
-
-    const { data } = supabase.storage.from(PRODUCT_BUCKET).getPublicUrl(path);
-    urls.push(data.publicUrl);
-  }
-
-  return { ok: true, urls };
+  return {
+    ok: true,
+    signedUrl: data.signedUrl,
+    publicUrl: publicData.publicUrl,
+  };
 }

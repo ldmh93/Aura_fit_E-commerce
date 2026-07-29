@@ -4,13 +4,17 @@
 -- ─────────────────────────────────────────────────────────────
 
 -- Bucket público: las fotos del catálogo se sirven directo al navegador.
+-- 10 MB y HEIC incluido: las fotos de celular llegan pesadas y los iPhone
+-- graban en HEIC. El navegador las reduce antes de subir, pero el margen
+-- evita rechazos si alguna se sube sin procesar.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'productos',
   'productos',
   true,
-  5242880, -- 5 MB
-  array['image/jpeg', 'image/png', 'image/webp', 'image/avif']
+  10485760, -- 10 MB
+  array['image/jpeg', 'image/png', 'image/webp', 'image/avif',
+        'image/heic', 'image/heif']
 )
 on conflict (id) do update set
   public = excluded.public,

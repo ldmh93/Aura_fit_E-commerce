@@ -38,7 +38,66 @@ export default async function AdminCouponsPage() {
           {coupons.length === 0 ? (
             <EmptyState message="No hay cupones creados." />
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Móvil: tarjetas. Cinco columnas no caben en un teléfono. */}
+            <ul className="divide-y divide-white/6 md:hidden">
+              {coupons.map((coupon) => {
+                const expired = new Date(coupon.expiration).getTime() < now;
+
+                return (
+                  <li key={coupon.id} className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium tracking-widest text-white">
+                          {coupon.code}
+                        </p>
+                        <p className="mt-1 text-xs text-mist">
+                          {formatDate(coupon.starts_at)} →{" "}
+                          {formatDate(coupon.expiration)}
+                        </p>
+                      </div>
+                      <span className="tabular shrink-0 text-lg font-semibold text-aura">
+                        {coupon.discount}%
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {expired ? (
+                        <Badge tone="muted">Expirado</Badge>
+                      ) : coupon.active ? (
+                        <Badge tone="success">Activo</Badge>
+                      ) : (
+                        <Badge tone="danger">Inactivo</Badge>
+                      )}
+
+                      <div className="ml-auto flex items-center gap-2">
+                        <form action={toggleCouponAction}>
+                          <input type="hidden" name="id" value={coupon.id} />
+                          <button
+                            type="submit"
+                            className="h-9 rounded-lg border border-white/12 px-3 text-xs text-mist active:border-aura active:text-aura"
+                          >
+                            {coupon.active ? "Desactivar" : "Activar"}
+                          </button>
+                        </form>
+                        <form action={deleteCouponAction}>
+                          <input type="hidden" name="id" value={coupon.id} />
+                          <button
+                            type="submit"
+                            aria-label={`Eliminar cupón ${coupon.code}`}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 text-mist active:text-danger"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-2xl">
                 <thead className="border-b border-white/8">
                   <tr>
@@ -112,6 +171,7 @@ export default async function AdminCouponsPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Panel>
       </div>

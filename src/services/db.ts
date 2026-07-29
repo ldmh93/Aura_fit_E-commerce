@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { env, isSupabaseConfigured } from "@/lib/env";
 
@@ -8,8 +7,8 @@ import { env, isSupabaseConfigured } from "@/lib/env";
  *
  * Dos permisos con propósitos distintos:
  *
- * - `publicDb()`  — llave pública. Respeta las políticas RLS, así que solo
- *   ve lo que vería cualquier visitante. Se usa en toda la tienda.
+ * - `publicDb()`  — llave pública, sin cookies. Respeta las políticas RLS,
+ *   así que solo ve lo que vería cualquier visitante. Toda la tienda.
  *
  * - `adminDb()`   — llave secreta. Omite RLS. Solo para el panel y para
  *   registrar pedidos de clientes anónimos. Nunca llega al navegador.
@@ -21,29 +20,22 @@ const MISSING =
   "Supabase no está configurado. Revisa NEXT_PUBLIC_SUPABASE_URL y las llaves en .env.local";
 
 /**
- * Cliente sin cookies.
+ * Cliente del catálogo público. **No lee cookies a propósito.**
  *
- * `generateStaticParams` y `sitemap.ts` corren fuera de una petición, donde
- * `cookies()` no existe. Ahí no hay sesión que leer de todos modos: el
- * contenido que se prerenderiza es el público.
+ * Antes usaba el cliente con sesión y eso rompía las fichas de producto:
+ * son páginas estáticas con revalidación, y al leer cookies en ejecución
+ * Next las detectaba como dinámicas y devolvía error 500
+ * ("Page changed from static to dynamic at runtime").
+ *
+ * El catálogo es el mismo para todos, así que la sesión nunca hizo falta.
+ * De paso, sin cookies estas páginas se pueden cachear de verdad.
  */
-function anonDb() {
+export async function publicDb() {
   if (!isSupabaseConfigured) throw new Error(MISSING);
 
   return createClient(env.supabaseUrl, env.supabaseAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-}
-
-export async function publicDb() {
-  try {
-    const db = await createServerSupabase();
-    if (db) return db;
-  } catch {
-    // Fuera de una petición: se sigue con el cliente sin cookies.
-  }
-
-  return anonDb();
 }
 
 export function adminDb() {

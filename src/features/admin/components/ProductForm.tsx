@@ -163,6 +163,7 @@ export function ProductForm({
             <Select id="fit" name="fit" defaultValue={product?.fit ?? "superior"}>
               <option value="superior">Parte superior</option>
               <option value="inferior">Parte inferior</option>
+              <option value="conjunto">Conjunto (arriba y abajo)</option>
             </Select>
             <p className="mt-1.5 text-xs text-mist">
               Define qué tabla de medidas se muestra.

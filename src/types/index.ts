@@ -55,8 +55,11 @@ export interface Product {
   category_id: string;
   category_name?: string;
   category_slug?: string;
-  /** Tipo de prenda: define qué tabla de medidas se muestra. */
-  fit: "superior" | "inferior";
+  /**
+   * Tipo de prenda: define qué tabla de medidas ve el cliente.
+   * `conjunto` muestra las dos, porque se necesitan ambas.
+   */
+  fit: "superior" | "inferior" | "conjunto";
   sizes: Size[];
   colors: ProductColor[];
   stock: number;

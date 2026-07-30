@@ -30,7 +30,7 @@ import {
 import { saveSettings } from "@/services/settings.service";
 import { DENIED, isAdmin } from "./guard";
 import { ONE_SIZE, colorHex, sortSizes } from "@/lib/config";
-import type { OrderStatus, ProductStatus, Size } from "@/types";
+import type { OrderStatus, Product, ProductStatus, Size } from "@/types";
 import { sanitizePhone, sanitizeText, slugify } from "@/utils";
 
 export interface ActionState {
@@ -53,6 +53,15 @@ function revalidateCatalog() {
 }
 
 /* ── Productos ───────────────────────────────────────────────── */
+
+const FITS: Product["fit"][] = ["superior", "inferior", "conjunto"];
+
+function parseFit(value: FormDataEntryValue | null): Product["fit"] {
+  const fit = String(value ?? "");
+  return FITS.includes(fit as Product["fit"])
+    ? (fit as Product["fit"])
+    : "superior";
+}
 
 function parseProductForm(formData: FormData): ProductInput {
   const name = sanitizeText(formData.get("name"), 120);
@@ -79,7 +88,7 @@ function parseProductForm(formData: FormData): ProductInput {
     images: lines(formData.get("images"), 6000),
     video: sanitizeText(formData.get("video"), 500) || null,
     category_id: sanitizeText(formData.get("category_id"), 60),
-    fit: formData.get("fit") === "inferior" ? "inferior" : "superior",
+    fit: parseFit(formData.get("fit")),
     sizes: sortSizes(formData.getAll("sizes").map(String) as Size[]),
     colors: colorNames.map((color) => ({ name: color, hex: colorHex(color) })),
     featured: formData.get("featured") === "on",

@@ -98,7 +98,8 @@ La `service_role` se compartió por chat durante la configuración.
 
 - [ ] Conectar dominio propio en Vercel → Settings → Domains
 - [ ] Actualizar `NEXT_PUBLIC_SITE_URL` al dominio final y redesplegar
-- [ ] Configurar `NEXT_PUBLIC_META_PIXEL_ID` y `NEXT_PUBLIC_GA_ID`
+- [x] Google Analytics activo (`G-16F7YNMEQM`)
+- [ ] Meta Pixel — pendiente: requiere cuenta de negocios propia
 - [ ] Revisar Core Web Vitals con tráfico real
 
 ---

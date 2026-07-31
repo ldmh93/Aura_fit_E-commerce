@@ -71,6 +71,22 @@ export async function getInventory(search?: string): Promise<InventoryRow[]> {
   );
 }
 
+/** Existencias de un producto, para precargar el formulario al editarlo. */
+export async function getInventoryForProduct(
+  productId: string,
+): Promise<InventoryEntry[]> {
+  const db = adminDb();
+  const { data } = await db
+    .from("inventory")
+    .select("id,product_id,size,color,quantity")
+    .eq("product_id", productId);
+
+  return ((data ?? []) as InventoryEntry[]).map((entry) => ({
+    ...entry,
+    size: entry.size as Size,
+  }));
+}
+
 export async function getLowStockRows(): Promise<InventoryRow[]> {
   return (await getInventoryOverview()).lowStock;
 }

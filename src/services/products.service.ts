@@ -375,6 +375,12 @@ export interface ProductInput {
   colors: ProductColor[];
   featured: boolean;
   status: ProductStatus;
+  /**
+   * Existencias por variante, con clave `talla__color`.
+   * Permite capturar el inventario en el mismo formulario del producto,
+   * en vez de guardar primero y pasar después por la pantalla aparte.
+   */
+  stock?: Record<string, number>;
 }
 
 /** Columnas de `products`. `stock` se omite: lo calcula el trigger. */
@@ -411,7 +417,7 @@ export async function createProduct(input: ProductInput): Promise<boolean> {
 
   if (error || !data) return false;
 
-  await syncVariants(data.id as string, input.sizes, input.colors);
+  await syncVariants(data.id as string, input.sizes, input.colors, input.stock);
   return true;
 }
 
@@ -424,7 +430,7 @@ export async function updateProduct(
   const { error } = await db.from("products").update(toRow(input)).eq("id", id);
   if (error) return false;
 
-  await syncVariants(id, input.sizes, input.colors);
+  await syncVariants(id, input.sizes, input.colors, input.stock);
   return true;
 }
 
@@ -466,6 +472,7 @@ async function syncVariants(
   productId: string,
   sizes: Size[],
   colors: ProductColor[],
+  stock?: Record<string, number>,
 ) {
   const db = adminDb();
 
@@ -490,6 +497,9 @@ async function syncVariants(
     (current ?? []).map((entry) => `${entry.size}__${entry.color}`),
   );
 
+  const cantidad = (size: Size, color: string) =>
+    Math.max(0, Math.floor(stock?.[`${size}__${color}`] ?? 0));
+
   const missing = sizes.flatMap((size) =>
     colors
       .filter((color) => !existing.has(`${size}__${color.name}`))
@@ -497,11 +507,28 @@ async function syncVariants(
         product_id: productId,
         size,
         color: color.name,
-        quantity: 0,
+        quantity: cantidad(size, color.name),
       })),
   );
 
   if (missing.length) {
     await db.from("inventory").insert(missing);
+  }
+
+  // Variantes que ya existían: se actualizan solo si el formulario trajo
+  // una cantidad para ellas. Así, editar un producto sin tocar el stock no
+  // lo pisa con ceros.
+  if (stock) {
+    const porActualizar = (current ?? []).filter((entry) => {
+      const key = `${entry.size}__${entry.color}`;
+      return key in stock && wanted.has(key);
+    });
+
+    for (const entry of porActualizar) {
+      await db
+        .from("inventory")
+        .update({ quantity: cantidad(entry.size as Size, entry.color) })
+        .eq("id", entry.id);
+    }
   }
 }

@@ -1,27 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Select, Textarea } from "@/components/ui/Field";
 import { ImageUploader } from "./ImageUploader";
+import { StockGrid } from "./StockGrid";
 import {
   createProductAction,
   updateProductAction,
   type ActionState,
 } from "@/features/admin/actions";
 import { COLOR_GROUPS, ONE_SIZE, SIZES } from "@/lib/config";
-import type { Category, Product } from "@/types";
+import type { Category, InventoryEntry, Product, Size } from "@/types";
 
 const initial: ActionState = { ok: false, message: "" };
 
+/**
+ * Alta y edición de producto.
+ *
+ * El orden sigue cómo se carga un producto en la vida real: primero las
+ * fotos —que es lo que se tiene a la mano al terminar de fotografiar—,
+ * luego los datos y al final tallas, colores y existencias juntas.
+ *
+ * Las tallas y colores se llevan en estado para poder mostrar la rejilla
+ * de existencias en cuanto se marcan, sin guardar ni cambiar de pantalla.
+ */
 export function ProductForm({
   categories,
   product,
+  inventory = [],
 }: {
   categories: Category[];
   product?: Product;
+  inventory?: InventoryEntry[];
 }) {
   const isEdit = Boolean(product);
   const [state, formAction] = useActionState(
@@ -29,13 +42,44 @@ export function ProductForm({
     initial,
   );
 
+  const [sizes, setSizes] = useState<Size[]>(product?.sizes ?? []);
+  const [colors, setColors] = useState<string[]>(
+    product?.colors.map((c) => c.name) ?? [],
+  );
+
+  const paleta = COLOR_GROUPS.flatMap((g) => g.colors);
+  const coloresElegidos = paleta.filter((c) => colors.includes(c.name));
+
+  function alternar<T>(lista: T[], valor: T): T[] {
+    return lista.includes(valor)
+      ? lista.filter((v) => v !== valor)
+      : [...lista, valor];
+  }
+
   return (
     <form action={formAction} className="space-y-6">
       {product ? <input type="hidden" name="id" value={product.id} /> : null}
 
+      {/* 1. Fotos — lo primero que se tiene al dar de alta una prenda */}
+      <section className="surface p-5">
+        <h2 className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-white">
+          1 · Fotos
+        </h2>
+        <p className="mb-5 text-xs leading-relaxed text-mist">
+          La primera es la que se ve en el catálogo. Con dos o más, la
+          tarjeta cambia de imagen al pasar el cursor.
+        </p>
+
+        <ImageUploader
+          folder={product?.slug ?? "nuevos"}
+          initial={product?.images ?? []}
+        />
+      </section>
+
+      {/* 2. Datos */}
       <section className="surface p-5">
         <h2 className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-white">
-          Información básica
+          2 · Información
         </h2>
 
         <div className="grid gap-5 md:grid-cols-2">
@@ -45,21 +89,22 @@ export function ProductForm({
               id="name"
               name="name"
               defaultValue={product?.name}
-              placeholder="Playera Compression AURA"
+              placeholder="Conjunto Top + Short"
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="slug">Dirección web</Label>
+            <Label htmlFor="sku">SKU</Label>
             <Input
-              id="slug"
-              name="slug"
-              defaultValue={product?.slug}
-              placeholder="playera-compression-aura"
+              id="sku"
+              name="sku"
+              defaultValue={product?.sku}
+              placeholder="AF-010"
+              required
             />
             <p className="mt-1.5 text-xs text-mist">
-              Se genera del nombre si lo dejas vacío.
+              Tu código interno. Sirve para identificarlo en los pedidos.
             </p>
           </div>
 
@@ -95,21 +140,24 @@ export function ProductForm({
           </div>
 
           <div>
-            <Label htmlFor="sku">SKU</Label>
+            <Label htmlFor="slug">Dirección web</Label>
             <Input
-              id="sku"
-              name="sku"
-              defaultValue={product?.sku}
-              placeholder="AF-001"
-              required
+              id="slug"
+              name="slug"
+              defaultValue={product?.slug}
+              placeholder="conjunto-top-short"
             />
+            <p className="mt-1.5 text-xs text-mist">
+              Se genera del nombre si lo dejas vacío.
+            </p>
           </div>
         </div>
       </section>
 
+      {/* 3. Precio y clasificación */}
       <section className="surface p-5">
         <h2 className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-white">
-          Precio y clasificación
+          3 · Precio y clasificación
         </h2>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -199,13 +247,14 @@ export function ProductForm({
         </div>
       </section>
 
+      {/* 4. Tallas, colores y existencias */}
       <section className="surface p-5">
         <h2 className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-white">
-          Tallas y colores
+          4 · Tallas, colores y existencias
         </h2>
         <p className="mb-5 text-xs leading-relaxed text-mist">
-          Cada combinación de talla y color se convierte en una entrada de
-          inventario. Si quitas una, se borra su existencia.
+          Marca lo que tengas y captura las piezas de cada combinación. Ya no
+          hace falta pasar por Inventario después de guardar.
         </p>
 
         <fieldset>
@@ -222,7 +271,8 @@ export function ProductForm({
                   type="checkbox"
                   name="sizes"
                   value={size}
-                  defaultChecked={product?.sizes.includes(size)}
+                  checked={sizes.includes(size)}
+                  onChange={() => setSizes((prev) => alternar(prev, size))}
                   className="sr-only"
                 />
                 {size}
@@ -256,9 +306,10 @@ export function ProductForm({
                         type="checkbox"
                         name="colors"
                         value={color.name}
-                        defaultChecked={product?.colors.some(
-                          (c) => c.name === color.name,
-                        )}
+                        checked={colors.includes(color.name)}
+                        onChange={() =>
+                          setColors((prev) => alternar(prev, color.name))
+                        }
                         className="sr-only"
                       />
                       <span
@@ -275,41 +326,30 @@ export function ProductForm({
           </div>
         </fieldset>
 
-        {isEdit ? (
-          <p className="mt-5 text-xs text-mist">
-            Ajusta las existencias desde{" "}
-            <Link
-              href="/admin/inventario"
-              className="text-aura hover:underline"
-            >
-              Inventario
-            </Link>
-            .
+        <div className="mt-7 border-t border-white/8 pt-6">
+          <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.16em] text-mist">
+            Piezas disponibles
           </p>
-        ) : null}
+          <StockGrid
+            sizes={sizes}
+            colors={coloresElegidos}
+            inventory={inventory}
+          />
+        </div>
       </section>
 
+      {/* 5. Video, opcional */}
       <section className="surface p-5">
         <h2 className="mb-5 text-xs font-medium uppercase tracking-[0.18em] text-white">
-          Fotos
+          5 · Video (opcional)
         </h2>
-
-        <div className="space-y-6">
-          <ImageUploader
-            folder={product?.slug ?? "nuevos"}
-            initial={product?.images ?? []}
-          />
-
-          <div>
-            <Label htmlFor="video">Video (URL)</Label>
-            <Input
-              id="video"
-              name="video"
-              defaultValue={product?.video ?? ""}
-              placeholder="Opcional"
-            />
-          </div>
-        </div>
+        <Label htmlFor="video">URL del video</Label>
+        <Input
+          id="video"
+          name="video"
+          defaultValue={product?.video ?? ""}
+          placeholder="Déjalo vacío si no tienes"
+        />
       </section>
 
       {state.message ? (
@@ -324,7 +364,7 @@ export function ProductForm({
         </p>
       ) : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="sticky bottom-0 -mx-5 flex flex-col gap-3 border-t border-white/8 bg-void/95 px-5 py-4 backdrop-blur-xl sm:flex-row md:mx-0 md:rounded-2xl md:border md:px-5">
         <SubmitButton isEdit={isEdit} />
         <Link
           href="/admin/productos"

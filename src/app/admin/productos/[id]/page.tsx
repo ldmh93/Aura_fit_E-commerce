@@ -5,6 +5,7 @@ import { AdminPage } from "@/features/admin/components/AdminUI";
 import { ProductForm } from "@/features/admin/components/ProductForm";
 import { getCategories } from "@/services/categories.service";
 import { getProductById } from "@/services/products.service";
+import { getInventoryForProduct } from "@/services/inventory.service";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,10 @@ export default async function EditProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [product, categories] = await Promise.all([
+  const [product, categories, inventory] = await Promise.all([
     getProductById(id),
     getCategories(true),
+    getInventoryForProduct(id),
   ]);
 
   if (!product) notFound();
@@ -37,7 +39,11 @@ export default async function EditProductPage({
       }
     >
       <div className="max-w-4xl">
-        <ProductForm categories={categories} product={product} />
+        <ProductForm
+          categories={categories}
+          product={product}
+          inventory={inventory}
+        />
       </div>
     </AdminPage>
   );

@@ -93,7 +93,22 @@ function parseProductForm(formData: FormData): ProductInput {
     colors: colorNames.map((color) => ({ name: color, hex: colorHex(color) })),
     featured: formData.get("featured") === "on",
     status: sanitizeText(formData.get("status"), 20) as ProductStatus,
+    stock: parseStock(formData),
   };
+}
+
+/** Casillas `stock__talla__color` que manda la rejilla del formulario. */
+function parseStock(formData: FormData): Record<string, number> {
+  const stock: Record<string, number> = {};
+
+  for (const [campo, valor] of formData.entries()) {
+    if (!campo.startsWith("stock__")) continue;
+    const clave = campo.slice("stock__".length);
+    if (!clave.includes("__")) continue;
+    stock[clave] = Math.max(0, Math.floor(Number(valor) || 0));
+  }
+
+  return stock;
 }
 
 function validateProduct(input: ProductInput): string | null {

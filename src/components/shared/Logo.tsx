@@ -47,7 +47,8 @@ export function LogoLink({ className }: { className?: string }) {
     <Link
       href="/"
       aria-label={`${SITE.name} — inicio`}
-      className={cn("group inline-flex items-center", className)}
+      // py extra: el texto mide 28 px y el dedo necesita 44 para acertar.
+      className={cn("group inline-flex items-center py-2", className)}
     >
       <Wordmark className="transition-opacity group-hover:opacity-80" />
     </Link>

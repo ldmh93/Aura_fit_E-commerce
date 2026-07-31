@@ -38,12 +38,12 @@ export async function Footer() {
 
           <div>
             <h3 className="eyebrow mb-5">Catálogo</h3>
-            <ul className="space-y-3">
+            <ul className="space-y-1">
               {categories.map((category) => (
                 <li key={category.id}>
                   <Link
                     href={`/categoria/${category.slug}`}
-                    className="text-sm text-mist transition-colors hover:text-white"
+                    className="-my-1 inline-block py-2.5 text-sm text-mist transition-colors hover:text-white"
                   >
                     {category.name}
                   </Link>
@@ -52,7 +52,7 @@ export async function Footer() {
               <li>
                 <Link
                   href="/shop"
-                  className="text-sm text-mist transition-colors hover:text-white"
+                  className="-my-1 inline-block py-2.5 text-sm text-mist transition-colors hover:text-white"
                 >
                   Ver todo
                 </Link>
@@ -62,12 +62,12 @@ export async function Footer() {
 
           <div>
             <h3 className="eyebrow mb-5">Ayuda</h3>
-            <ul className="space-y-3">
+            <ul className="space-y-1">
               {help.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-mist transition-colors hover:text-white"
+                    className="-my-1 inline-block py-2.5 text-sm text-mist transition-colors hover:text-white"
                   >
                     {link.label}
                   </Link>
@@ -100,7 +100,7 @@ export async function Footer() {
                   href={generalWhatsappUrl()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-silver transition-colors hover:text-aura"
+                  className="-my-1 inline-block py-2 text-sm text-silver transition-colors hover:text-aura"
                 >
                   WhatsApp {WHATSAPP.display}
                 </a>
@@ -155,14 +155,14 @@ export async function Footer() {
           <div className="flex flex-wrap items-center gap-6">
             <Link
               href="/privacidad"
-              className="transition-colors hover:text-white"
+              className="-my-2 inline-block py-2.5 transition-colors hover:text-white"
             >
               Aviso de privacidad
             </Link>
-            <Link href="/terminos" className="transition-colors hover:text-white">
+            <Link href="/terminos" className="-my-2 inline-block py-2.5 transition-colors hover:text-white">
               Términos
             </Link>
-            <Link href="/admin" className="transition-colors hover:text-white">
+            <Link href="/admin" className="-my-2 inline-block py-2.5 transition-colors hover:text-white">
               Administración
             </Link>
           </div>

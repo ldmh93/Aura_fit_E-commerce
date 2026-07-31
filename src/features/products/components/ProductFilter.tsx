@@ -143,7 +143,7 @@ export function ProductFilter({
                   )
                 }
                 className={cn(
-                  "h-7 w-7 rounded-full border-2 transition-all",
+                  "h-9 w-9 rounded-full border-2 transition-all",
                   get("color") === color.name
                     ? "scale-110 border-aura"
                     : "border-white/15 hover:border-white/40",
@@ -199,7 +199,7 @@ function Chip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "rounded-full border px-3 py-1.5 text-xs transition-all duration-200",
+        "rounded-full border px-3.5 py-2.5 text-xs transition-all duration-200",
         active
           ? "border-aura bg-aura/12 text-aura"
           : "border-white/10 text-mist hover:border-white/25 hover:text-white",

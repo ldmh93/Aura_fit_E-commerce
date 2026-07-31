@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { RefreshCw } from "lucide-react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Select, Textarea } from "@/components/ui/Field";
@@ -9,6 +10,7 @@ import { ImageUploader } from "./ImageUploader";
 import { StockGrid } from "./StockGrid";
 import {
   createProductAction,
+  suggestSkuAction,
   updateProductAction,
   type ActionState,
 } from "@/features/admin/actions";
@@ -42,10 +44,31 @@ export function ProductForm({
     initial,
   );
 
+  const [name, setName] = useState(product?.name ?? "");
+  const [categoryId, setCategoryId] = useState(
+    product?.category_id ?? categories[0]?.id ?? "",
+  );
+  const [sku, setSku] = useState(product?.sku ?? "");
+  // Si el usuario escribe su propio código, se deja de sugerir.
+  const skuManual = useRef(Boolean(product?.sku));
+
   const [sizes, setSizes] = useState<Size[]>(product?.sizes ?? []);
   const [colors, setColors] = useState<string[]>(
     product?.colors.map((c) => c.name) ?? [],
   );
+
+  // El código se propone solo, con una pausa para no consultar en cada
+  // tecla. Solo mientras nadie lo haya escrito a mano.
+  useEffect(() => {
+    if (skuManual.current || name.trim().length < 2) return;
+
+    const timer = setTimeout(async () => {
+      const sugerido = await suggestSkuAction(name, categoryId);
+      if (sugerido && !skuManual.current) setSku(sugerido);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [name, categoryId]);
 
   const paleta = COLOR_GROUPS.flatMap((g) => g.colors);
   const coloresElegidos = paleta.filter((c) => colors.includes(c.name));
@@ -88,7 +111,8 @@ export function ProductForm({
             <Input
               id="name"
               name="name"
-              defaultValue={product?.name}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Conjunto Top + Short"
               required
             />
@@ -96,15 +120,34 @@ export function ProductForm({
 
           <div>
             <Label htmlFor="sku">SKU</Label>
-            <Input
-              id="sku"
-              name="sku"
-              defaultValue={product?.sku}
-              placeholder="AF-010"
-              required
-            />
-            <p className="mt-1.5 text-xs text-mist">
-              Tu código interno. Sirve para identificarlo en los pedidos.
+            <div className="flex gap-2">
+              <Input
+                id="sku"
+                name="sku"
+                value={sku}
+                onChange={(e) => {
+                  skuManual.current = true;
+                  setSku(e.target.value.toUpperCase());
+                }}
+                placeholder="Se genera solo"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  skuManual.current = false;
+                  const sugerido = await suggestSkuAction(name, categoryId);
+                  if (sugerido) setSku(sugerido);
+                }}
+                title="Volver a generarlo"
+                aria-label="Volver a generar el SKU"
+                className="shrink-0 rounded-xl border border-white/12 px-3 text-mist transition-colors hover:border-aura hover:text-aura"
+              >
+                <RefreshCw className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-mist">
+              Se arma solo con el nombre y la categoría. Puedes escribir el
+              tuyo si prefieres.
             </p>
           </div>
 
@@ -195,7 +238,8 @@ export function ProductForm({
             <Select
               id="category_id"
               name="category_id"
-              defaultValue={product?.category_id}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
               required
             >
               {categories.map((category) => (

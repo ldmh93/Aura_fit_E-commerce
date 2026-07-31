@@ -347,6 +347,13 @@ export async function getAdminProducts(search?: string): Promise<Product[]> {
   return (data as unknown as Row[]).map(mapRow);
 }
 
+/** SKU que ya existen, para calcular el siguiente consecutivo libre. */
+export async function getUsedSkus(): Promise<string[]> {
+  const db = adminDb();
+  const { data } = await db.from("products").select("sku");
+  return (data ?? []).map((row) => row.sku as string);
+}
+
 export async function getProductById(id: string): Promise<Product | null> {
   const db = adminDb();
   const { data } = await db

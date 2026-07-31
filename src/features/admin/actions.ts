@@ -28,6 +28,9 @@ import {
   toggleCoupon,
 } from "@/services/coupons.service";
 import { saveSettings } from "@/services/settings.service";
+import { getUsedSkus } from "@/services/products.service";
+import { getCategories } from "@/services/categories.service";
+import { buildSkuBase, nextSku } from "./sku";
 import { DENIED, isAdmin } from "./guard";
 import { ONE_SIZE, colorHex, sortSizes } from "@/lib/config";
 import type { OrderStatus, Product, ProductStatus, Size } from "@/types";
@@ -111,9 +114,31 @@ function parseStock(formData: FormData): Record<string, number> {
   return stock;
 }
 
+/**
+ * Sugiere un SKU a partir del nombre y la categoría.
+ * Lo llama el formulario mientras se escribe, y también sirve de respaldo
+ * cuando el campo se envía vacío.
+ */
+export async function suggestSkuAction(
+  name: string,
+  categoryId: string,
+): Promise<string> {
+  if (!(await isAdmin())) return "";
+
+  const limpio = sanitizeText(name, 120);
+  if (limpio.length < 2) return "";
+
+  const [categories, usados] = await Promise.all([
+    getCategories(true),
+    getUsedSkus(),
+  ]);
+
+  const categoria = categories.find((c) => c.id === categoryId);
+  return nextSku(buildSkuBase(limpio, categoria?.name), usados);
+}
+
 function validateProduct(input: ProductInput): string | null {
   if (input.name.length < 3) return "El nombre es obligatorio.";
-  if (!input.sku) return "El SKU es obligatorio.";
   if (input.price <= 0) return "El precio debe ser mayor a cero.";
   if (input.old_price && input.old_price <= input.price)
     return "El precio anterior debe ser mayor que el precio actual.";
@@ -137,6 +162,10 @@ export async function createProductAction(
   const error = validateProduct(input);
   if (error) return { ok: false, message: error };
 
+  if (!input.sku) {
+    input.sku = await suggestSkuAction(input.name, input.category_id);
+  }
+
   const ok = await createProduct(input);
   if (!ok)
     return { ok: false, message: "Ya existe un producto con esa dirección." };
@@ -158,6 +187,10 @@ export async function updateProductAction(
 
   const error = validateProduct(input);
   if (error) return { ok: false, message: error };
+
+  if (!input.sku) {
+    input.sku = await suggestSkuAction(input.name, input.category_id);
+  }
 
   const ok = await updateProduct(id, input);
   if (!ok) return { ok: false, message: "No se pudo actualizar." };
